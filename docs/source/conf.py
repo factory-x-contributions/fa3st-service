@@ -3,8 +3,8 @@
 # -- Project information
 
 project = 'FA³ST Service'
-copyright = '2025, Eclipse FA³ST Commiters'
-author = 'Eclipse FA³ST Commiters'
+copyright = '2022, Fraunhofer IOSB'
+author = 'Fraunhofer IOSB'
 
 # -- General configuration
 

@@ -18,11 +18,10 @@ In-Memory FileStorage does not support any configuration parameters.
 :caption: Example configuration for In-Memory FileStorage.
 :lineno-start: 1
 {
-    "fileStorage":
-    {
-        "@class": "org.eclipse.digitaltwin.fa3st.service.filestorage.memory.FileStorageInMemory"
-    },
-    //...
+	"fileStorage" : {
+		"@class" : "de.fraunhofer.iosb.ilt.faaast.service.filestorage.memory.FileStorageInMemory"
+	},
+	//...
 }
 ```
 
@@ -47,12 +46,11 @@ Thus, changes are stored permanently.
 :caption: Example configuration for FileSystem FileStorage.
 :lineno-start: 1
 {
-    "fileStorage":
-    {
-        "@class": "org.eclipse.digitaltwin.fa3st.service.filestorage.filesystem.FileStorageFilesystem",
-        "path": "./my/file/cache",
-        "existingDataPath": "./my/initial/data"
-    },
-    //...
+	"fileStorage" : {
+		"@class" : "de.fraunhofer.iosb.ilt.faaast.service.filestorage.filesystem.FileStorageFilesystem",
+		"path": "./my/file/cache",
+		"existingDataPath": "./my/initial/data"
+	},
+	//...
 }
 ```

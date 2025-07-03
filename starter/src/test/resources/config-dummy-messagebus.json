@@ -4,6 +4,6 @@
         "requestHandlerThreadPoolSize":2
     },
     "messageBus":{
-        "@class":"org.eclipse.digitaltwin.fa3st.service.starter.fixtures.DummyMessageBus"
+        "@class":"de.fraunhofer.iosb.ilt.faaast.service.starter.fixtures.DummyMessageBus"
     }
 }

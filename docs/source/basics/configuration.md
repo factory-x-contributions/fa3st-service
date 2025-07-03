@@ -104,7 +104,7 @@ The following shows an example of a configuration using and HTTP endpoint with p
 :lineno-start: 1
 {
 	"endpoints" : {
-		"@class" : "org.eclipse.digitaltwin.fa3st.service.endpoint.http.HttpEndpoint",
+		"@class" : "de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.HttpEndpoint",
 		"port" : 443
 	},
 	// ...
@@ -141,7 +141,7 @@ The structure of the certificate-related configuration object is explained in th
 :lineno-start: 1
 {
 	"keyStoreType": "PKCS12",
-	"keyStorePath": "C:\fa3st\MyKeyStore.p12",
+	"keyStorePath": "C:\faaast\MyKeyStore.p12",
 	"keyStorePassword": "changeit",
 	"keyAlias": "server-key",
 	"keyPassword": "changeit"
@@ -159,7 +159,7 @@ Via CLI this is done by using the JSONPath expression to the property within the
 For example, to override the `requestHandlerThreadPoolSize` property call FA³ST Service like this
 
 ```sh
-> java -jar fa3st-service-starter-{version}.jar [any other CLI arguments] core.requestHandlerThreadPoolSize=42
+> java -jar starter-{version}.jar [any other CLI arguments] core.requestHandlerThreadPoolSize=42
 ```
 
 To access configuration properties inside an array or list use array notation, e.g., `endpoints[0].port=8081`
@@ -169,8 +169,8 @@ To access configuration properties inside an array or list use array notation, e
 
 Overriding configuration properties via environment variables is similar to overriding them via CLI with two differences
 
-1. Add the prefix *fa3st_config_extension_*
+1. Add the prefix *faaast_config_extension_*
 2. Replace `.` that separate the JSONPath with `_`
 
-Applying the previous examples yields `fa3st_config_extension_core_requestHandlerThreadPoolSize=42` to update the property `requestHandlerThreadPoolSize` and `fa3st_config_extension_endpoints[0]_port=8081` to update the port of the HTTP endpoint.
+Applying the previous examples yields `faaast_config_extension_core_requestHandlerThreadPoolSize=42` to update the property `requestHandlerThreadPoolSize` and `faaast_config_extension_endpoints[0]_port=8081` to update the port of the HTTP endpoint.
 

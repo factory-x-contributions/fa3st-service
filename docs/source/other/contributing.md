@@ -1,40 +1,39 @@
 # Contributing
 
-You want to help out improving Eclipse FA³ST? Great, welcome to the community! So that you can contribute, please read this document carefully as there are some things you need to know.
+Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions are **greatly appreciated**.
 
-## Terms of Use
+If you have a suggestion for improvements, please fork the repo and create a pull request. You can also simply open an issue.
+Don't forget to rate the project! Thanks again!
 
-Eclipse FA³ST repository is subject to the [Terms of Use of the Eclipse Foundation](https://www.eclipse.org/legal/termsofuse.php).
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
+## Code Formatting
 
-## Eclipse Development Process
-As an open project of the Eclipse Foundation, Eclipse FA³ST is governed by the [Eclipse Foundation Development Process](https://www.eclipse.org/projects/dev_process/)
+The project uses _spotless:check_ in the build cycle, which means the project only compiles if all code, *.pom and *.xml files are formatted according to the project's codestyle definitions (see details on [spotless](https://github.com/diffplug/spotless)).
+You can automatically format your code by running
 
+> mvn spotless:apply
 
-## Eclipse Contributor Agreement (ECA)
-To be able to contribute to any open source project of the Eclipse Foundation you must electronically sign the [Eclipse Contributor Agreement (ECA)](https://www.eclipse.org/legal/ECA.php).
+Additionally, you can import the eclipse formatting rules defined in _/codestyle_ into our IDE.
 
-For more information, please see the [Eclipse Committer Handbook](https://www.eclipse.org/projects/handbook/#resources-commit)
+## Third Party License
 
-### Signing the ECA
-The following checklist is a short help for you to sign the [Eclipse Contributor Agreement (ECA)](https://www.eclipse.org/legal/ECA.php):
-1. In case you don't have one, [create an account at Eclipse Foundation](https://accounts.eclipse.org)
-2. Assign your GitHub user name in your Eclipse Foundation account settings
-3. Open the [ECA form](https://accounts.eclipse.org/user/521935/eca/3.1.0) and agree to the terms.
+If you use additional dependencies please be sure that the licenses of these dependencies are compliant with our License. If you are not sure which license your dependencies have, you can run
+> mvn license:aggregate-third-party-report
 
-Please, see [ECA FAQ](https://www.eclipse.org/legal/ecafaq.php) for more information.
+and check the generated report in the directory `docs/third_party_licenses_report.html`.
 
+## Contributors
 
-## Creating your Contribution
+| Name | Github Account |
+|:--| -- |
+| Michael Jacoby | [mjacoby](https://github.com/mjacoby) |
+| Jens Müller | [JensMueller2709](https://github.com/JensMueller2709) |
+| Klaus Schick | [schick64](https://github.com/schick64) |
+| Tino Bischoff | [tbischoff2](https://github.com/tbischoff2) |
+| Friedrich Volz | [fvolz](https://github.com/fvolz) |
 
-After you signed the ECA, you are ready to dig in:
-1. Fork the repository on GitHub.
-2. Create a new branch for your changes starting from the main branch. Name your branch like this: GH-1234-short-description-here where 1234 is the Github issue number.
-3. Make your changes to the code.
-4. Make sure you include tests.
-5. Make sure the test suite passes after your changes: you can run `mvn verify` to run tests locally. Use `mvn spotless:apply` to properly format your code.
-6. Commit your changes into the branch you created. Make sure the commit author name and e-mail correspond to what you used to sign the ECA. Use meaningful commit messages. Reference the issue number in the commit message (for example "GH-276: added null check").
-7. Push your changes to your branch in your forked repository.
-8. Use GitHub to submit a pull request (PR) for your contribution back to main in the Eclipse FA³ST repository. Once you have submitted your PR, do not use your branch for any other development (unless asked to do so by the reviewers of your PR).
-
-After you submit a PR, we will review your contribution and possibly make some suggestions for improvements. Once everything is complete, the PR will be merged into the main branch (if it's a bug fix to be included in the next maintenance release) or into the develop branch (if it's a feature or improvement to be included in the next minor or major release).

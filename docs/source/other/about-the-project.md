@@ -6,10 +6,18 @@ Furthermore, the AAS covers all stages of the lifecycle of an asset starting in 
 To guarantee the interoperability of assets Industrie 4.0 defines an information metamodel for the AAS covering all important aspects as type/instance concept, events, predefined data specification templates, security aspects, mapping of data formats and many more. Moreover, interfaces and operations for a registry, a repository, publish and discovery are specified.
 At first glance the evolving specification of the AAS seems pretty complex and a challenging task for asset providers. To make things easier, FA³ST provides an implementation of several tools to allow for easy and fast creation and management of AAS-compliant Digital Twins.
 
+:::{important}
+FA³ST is currently in the process of becoming an Eclipse project which will be finalized after releasing v1.0.0 here.
+:::
+
 ## Contact
 
-fa3st-dev@eclipse.org
+faaast@iosb.fraunhofer.de
 
 ## License
 
 Distributed under the Apache 2.0 License. See `LICENSE` for more information.
+
+Copyright (C) 2022 Fraunhofer Institut IOSB, Fraunhoferstr. 1, D 76131 Karlsruhe, Germany.
+
+You should have received a copy of the Apache 2.0 License along with this program. If not, see [https://www.apache.org/licenses/LICENSE-2.0.html](https://www.apache.org/licenses/LICENSE-2.0.html).

@@ -6,26 +6,26 @@
 	},
 	"endpoints": [
 		{
-			"@class": "org.eclipse.digitaltwin.fa3st.service.endpoint.http.HttpEndpoint",
+			"@class": "de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.HttpEndpoint",
 			"port": 443,
 			"corsEnabled": true
 		},
 		{
-			"@class": "de.fraunhofer.iosb.fa3st.service.endpoint.opcua.OpcUaEndpoint",
+			"@class": "de.fraunhofer.iosb.ilt.faaast.service.endpoint.opcua.OpcUaEndpoint",
 			"tcpPort": 8081
 		}
 	],
 	"persistence":
 	{
-		"@class": "org.eclipse.digitaltwin.fa3st.service.persistence.memory.PersistenceInMemory"
+		"@class": "de.fraunhofer.iosb.ilt.faaast.service.persistence.memory.PersistenceInMemory"
 	},
 	"messageBus":
 	{
-		"@class": "org.eclipse.digitaltwin.fa3st.service.messagebus.internal.MessageBusInternal"
+		"@class": "de.fraunhofer.iosb.ilt.faaast.service.messagebus.internal.MessageBusInternal"
 	},
 	"assetConnections": [
 		{
-			"@class": "org.eclipse.digitaltwin.fa3st.service.example.assetconnection.custom.CustomAssetConnection",
+			"@class": "de.fraunhofer.iosb.ilt.faaast.service.example.assetconnection.custom.CustomAssetConnection",
 			"valueProviders":
 			{
 				"(Submodel)urn:aas:id:cognitwin:demo:submodel:1, (Property)PropertyStringRead":

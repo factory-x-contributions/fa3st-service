@@ -25,7 +25,7 @@
             },
     "assetConnections": [
         {
-            "@class": "org.eclipse.digitaltwin.fa3st.service.config.fixtures.DummyAssetConnection",
+            "@class": "de.fraunhofer.iosb.ilt.faaast.service.config.fixtures.DummyAssetConnection",
             "valueProviders":
                     {
                         "[ModelRef](Property)Temperature":

@@ -1,60 +1,32 @@
-### Java
-*.class
-*.log
-*.ctxt
-*.jar
-*.war
-*.zip
-*.tar.gz
-*.rar
+*~
+*.autosave
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
-
-### Maven
-target/
-pom.xml.tag
-pom.xml.releaseBackup
-pom.xml.versionsBackup
-pom.xml.next
-release.properties
-dependency-reduced-pom.xml
-buildNumber.properties
-.mvn/timing.properties
-.mvn/wrapper/maven-wrapper.jar
-**/.flattend-pom.xml
-**/.flattened-pom.xml
-
-### JetBrains
-.idea/
+### IntelliJ ###
 *.iml
-
-# CMake
-cmake-build-*/
-
-# File-based project format
-*.iws
-
-# IntelliJ
+.idea/
 out/
 
-### Netbeans
+### Netbeans ###
 **/nbproject/*
 **/nb-configuration.xml
-**/nbactions.xml
 build/
 nbbuild/
 dist/
 nbdist/
 .nb-gradle/
-
-### FA³ST
 s[0-9]*/
-/characterizationServiceOpcUa/client
+
+### Maven ###
+target/
+
+*.jar
+**/.flattend-pom.xml
+**/.flattened-pom.xml
+/endpoint/opcua-prosys/PKI
+/documentation/third_party_licenses_report
+
+*.log
+
+### PKI Files OPC UA Endpoint
 *.pem
 *.der
-**/PKI/
-
-### Other
-*~
-*.autosave

@@ -1,7 +1,7 @@
-# Eclipse FA³ST Service 
+# FA³ST Service 
 
-FA³ST Service enables the creation of Digital Twins (DTs) in accordance to the [Asset Administration Shell (AAS) specification ](https://industrialdigitaltwin.org/en/content-hub/aasspecifications).
-It is a software that, when started, offers one or more AAS-compliant APIs to interact with a DT. 
+The **F**raunhofer **A**dvanced **A**sset **A**dministration **S**hell **T**ools (**FA³ST**) Service enables creation of Digital Twins (DTs) in accordance to the [Asset Administration Shell (AAS) specification ](https://industrialdigitaltwin.org/en/content-hub/aasspecifications).
+FA³ST Service is a software that, when started, offers one or more AAS-compliant APIs to interact with a DT. 
 Optionally, it can be started given an existing AAS model file and/or a configuration file.
 FA³ST Service also allows synchronizing a DT with the asset(s) it represent via so-called *AssetConnection*.
 

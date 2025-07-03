@@ -3,14 +3,14 @@
         "requestHandlerThreadPoolSize": 2
     },
     "endpoints": [{
-            "@class": "org.eclipse.digitaltwin.fa3st.service.endpoint.http.HttpEndpoint",
+            "@class": "de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.HttpEndpoint",
             "port": 443
         }],
     "persistence": {
-        "@class": "org.eclipse.digitaltwin.fa3st.service.persistence.memory.PersistenceInMemory",
+        "@class": "de.fraunhofer.iosb.ilt.faaast.service.persistence.memory.PersistenceInMemory",
         "initialModelFile": "/app/resources/demoAAS.json"
     },
     "messageBus": {
-        "@class": "org.eclipse.digitaltwin.fa3st.service.messagebus.internal.MessageBusInternal"
+        "@class": "de.fraunhofer.iosb.ilt.faaast.service.messagebus.internal.MessageBusInternal"
     }
 }

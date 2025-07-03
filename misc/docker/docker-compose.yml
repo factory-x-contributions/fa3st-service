@@ -1,0 +1,11 @@
+version: '3.4'
+services:
+  FA3ST:
+    image: fraunhoferiosb/faaast-service
+    volumes:
+      - ../examples/:/app/resources/
+    environment:
+      - faaast_model=/app/resources/model.json
+      - faaast_config=/app/resources/config.json
+    ports:
+      - 443:443
