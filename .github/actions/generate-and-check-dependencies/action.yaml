@@ -10,6 +10,11 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Build project to correctly resolve dependencies
+      shell: bash
+      run: |
+        mvn clean install -DskipTests
+
     - name: Generate dependency list
       shell: bash
       run: |
