@@ -20,6 +20,11 @@ runs:
         cat dependencies-unclean | grep -o '[a-zA-Z0-9.-]\+:[a-zA-Z0-9.-]\+:jar:[0-9.]\+' | sed 's/:jar//' > dependency-list
         cat dependency-list
 
+    - name: Print failure reason
+      if: failure()
+      shell: bash
+      run: cat dependencies-unclean
+
     - name: Run dash
       id: run-dash
       uses: eclipse-tractusx/sig-infra/.github/actions/run-dash@main
