@@ -155,7 +155,7 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
                 Base64.getEncoder().encodeToString(message.getElement().getKeys().get(0).getValue().getBytes())
                 + "/submodel-elements/" + message.getElement().getKeys().get(1).getValue())
                 : new URI("uri:submodels/" +
-                Base64.getEncoder().encodeToString(message.getElement().getKeys().get(0).getValue().getBytes()));
+                        Base64.getEncoder().encodeToString(message.getElement().getKeys().get(0).getValue().getBytes()));
         var eventBuilder = CloudEventBuilder.v1()
                 .withType("org.factory-x.events.v1." + "SubmodelValueChanged")
                 .withSource(source)
