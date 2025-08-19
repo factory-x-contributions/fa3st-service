@@ -30,6 +30,7 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
     private static final String DEFAULT_CLIENT_KEYSTORE_PATH = "";
     private static final String DEFAULT_HOST = "tcp://localhost:1883";
     private static final String DEFAULT_TOPIC_PREFIX = "events";
+    private static final boolean DEFAULT_SLIM_EVENTS = true;
 
     private String clientId;
     private CertificateConfig clientCertificate;
@@ -37,6 +38,7 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
     private String user;
     private String password;
     private String topicPrefix;
+    private boolean slimEvents;
 
     public MessageBusCloudeventsConfig() {
         this.host = DEFAULT_HOST;
@@ -48,6 +50,7 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
         this.topicPrefix = DEFAULT_TOPIC_PREFIX;
         this.user = "user";
         this.password = "password";
+        this.slimEvents = DEFAULT_SLIM_EVENTS;
     }
 
 
@@ -111,6 +114,16 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
     }
 
 
+    public boolean isSlimEvents() {
+        return slimEvents;
+    }
+
+
+    public void setSlimEvents(boolean slimEvents) {
+        this.slimEvents = slimEvents;
+    }
+
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -124,7 +137,8 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
                 && Objects.equals(clientCertificate, other.clientCertificate)
                 && Objects.equals(password, other.password)
                 && Objects.equals(clientId, other.clientId)
-                && Objects.equals(topicPrefix, other.topicPrefix);
+                && Objects.equals(topicPrefix, other.topicPrefix)
+                && Objects.equals(slimEvents, other.slimEvents);
     }
 
 
@@ -135,7 +149,8 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
                 clientCertificate,
                 password,
                 clientId,
-                topicPrefix);
+                topicPrefix,
+                slimEvents);
     }
 
 
@@ -168,6 +183,7 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
             getBuildingInstance().setPassword(base.getPassword());
             getBuildingInstance().setClientId(base.getClientId());
             getBuildingInstance().setTopicPrefix(base.getTopicPrefix());
+            getBuildingInstance().setSlimEvents(base.isSlimEvents());
             return getSelf();
         }
 
@@ -204,6 +220,12 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
 
         public B topicPrefix(String value) {
             getBuildingInstance().setTopicPrefix(value);
+            return getSelf();
+        }
+
+
+        public B slimEvents(boolean value) {
+            getBuildingInstance().setSlimEvents(value);
             return getSelf();
         }
 
