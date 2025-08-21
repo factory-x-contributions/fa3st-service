@@ -14,6 +14,8 @@
  */
 package de.fraunhofer.iosb.ilt.faaast.service.messagebus.cloudevents;
 
+import static org.eclipse.digitaltwin.aas4j.v3.model.ModelType.ASSET_ADMINISTRATION_SHELL;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -38,7 +40,6 @@ import io.cloudevents.core.builder.CloudEventBuilder;
 import io.cloudevents.jackson.JsonFormat;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ScanResult;
-
 import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -50,8 +51,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-
-import static org.eclipse.digitaltwin.aas4j.v3.model.ModelType.ASSET_ADMINISTRATION_SHELL;
 
 
 /**
@@ -103,7 +102,8 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
             if (cloudMessage != null) {
                 client.publish(config.getTopicPrefix(), objectMapper.writeValueAsString(cloudMessage));
             }
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             throw new MessageBusException(String.format("Error publishing event via Cloudevents MQTT message bus for message type {s}",
                     message.getClass()), e);
         }
@@ -115,9 +115,11 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
 
         if (message instanceof ElementCreateEventMessage createMessage) {
             return isAas ? AasElementCreated(createMessage) : SubmodelElementCreated(createMessage);
-        } else if (message instanceof ElementUpdateEventMessage updateMessage) {
+        }
+        else if (message instanceof ElementUpdateEventMessage updateMessage) {
             return isAas ? AasValueChanged(updateMessage) : SubmodelValueChanged(updateMessage);
-        } else {
+        }
+        else {
             return null;
         }
     }
@@ -250,7 +252,8 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
                         .getSubclasses(messageType.getName())
                         .filter(x -> !x.isAbstract())
                         .loadClasses(EventMessage.class);
-            } else {
+            }
+            else {
                 List<Class<EventMessage>> list = new ArrayList<>();
                 list.add((Class<EventMessage>) messageType);
                 return list;
@@ -264,8 +267,8 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
         SubscriptionInfo info = subscriptions.get(id);
         Ensure.requireNonNull(info.getSubscribedEvents(), "subscriptionInfo must be non-null");
         subscriptions.get(id).getSubscribedEvents().stream().forEach(a -> //find all events for given abstract or event
-                determineEvents((Class<? extends EventMessage>) a).stream().forEach(e -> //unsubscribe from all events
-                        client.unsubscribe(config.getTopicPrefix() + e.getSimpleName())));
+        determineEvents((Class<? extends EventMessage>) a).stream().forEach(e -> //unsubscribe from all events
+        client.unsubscribe(config.getTopicPrefix() + e.getSimpleName())));
         subscriptions.remove(id);
     }
 }
