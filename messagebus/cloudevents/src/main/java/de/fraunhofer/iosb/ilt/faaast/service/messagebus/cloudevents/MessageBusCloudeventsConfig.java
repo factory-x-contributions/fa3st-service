@@ -29,7 +29,7 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
     private static final String DEFAULT_CLIENT_KEYSTORE_PASSWORD = "";
     private static final String DEFAULT_CLIENT_KEYSTORE_PATH = "";
     private static final String DEFAULT_HOST = "tcp://localhost:1883";
-    private static final String DEFAULT_TOPIC_PREFIX = "events";
+    private static final String DEFAULT_TOPIC_PREFIX = "noauth";
     private static final boolean DEFAULT_SLIM_EVENTS = true;
 
     private String clientId;
