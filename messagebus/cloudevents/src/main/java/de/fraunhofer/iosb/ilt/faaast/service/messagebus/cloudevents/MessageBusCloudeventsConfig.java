@@ -16,6 +16,7 @@ package de.fraunhofer.iosb.ilt.faaast.service.messagebus.cloudevents;
 
 import de.fraunhofer.iosb.ilt.faaast.service.config.CertificateConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.messagebus.MessageBusConfig;
+
 import java.util.Objects;
 import java.util.UUID;
 
@@ -31,6 +32,7 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
     private static final String DEFAULT_HOST = "tcp://localhost:1883";
     private static final String DEFAULT_TOPIC_PREFIX = "noauth";
     private static final boolean DEFAULT_SLIM_EVENTS = true;
+    private static final String DEFAULT_EVENT_CALLBACK_ADDRESS = "https://localhost";
 
     private String clientId;
     private CertificateConfig clientCertificate;
@@ -39,6 +41,7 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
     private String password;
     private String topicPrefix;
     private boolean slimEvents;
+    private String eventCallbackAddress;
 
     public MessageBusCloudeventsConfig() {
         this.host = DEFAULT_HOST;
@@ -51,6 +54,7 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
         this.user = "user";
         this.password = "password";
         this.slimEvents = DEFAULT_SLIM_EVENTS;
+        this.eventCallbackAddress = DEFAULT_EVENT_CALLBACK_ADDRESS;
     }
 
 
@@ -124,6 +128,15 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
     }
 
 
+    public String getEventCallbackAddress() {
+        return eventCallbackAddress;
+    }
+
+    public void setEventCallbackAddress(String eventCallbackAddress) {
+        this.eventCallbackAddress = eventCallbackAddress;
+    }
+
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -138,7 +151,8 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
                 && Objects.equals(password, other.password)
                 && Objects.equals(clientId, other.clientId)
                 && Objects.equals(topicPrefix, other.topicPrefix)
-                && Objects.equals(slimEvents, other.slimEvents);
+                && Objects.equals(slimEvents, other.slimEvents)
+                && Objects.equals(eventCallbackAddress, other.eventCallbackAddress);
     }
 
 
@@ -150,7 +164,8 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
                 password,
                 clientId,
                 topicPrefix,
-                slimEvents);
+                slimEvents,
+                eventCallbackAddress);
     }
 
 
@@ -184,6 +199,7 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
             getBuildingInstance().setClientId(base.getClientId());
             getBuildingInstance().setTopicPrefix(base.getTopicPrefix());
             getBuildingInstance().setSlimEvents(base.isSlimEvents());
+            getBuildingInstance().setEventCallbackAddress(base.getEventCallbackAddress());
             return getSelf();
         }
 
@@ -226,6 +242,12 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
 
         public B slimEvents(boolean value) {
             getBuildingInstance().setSlimEvents(value);
+            return getSelf();
+        }
+
+
+        public B eventCallbackAddress(String value) {
+            getBuildingInstance().setEventCallbackAddress(value);
             return getSelf();
         }
 
