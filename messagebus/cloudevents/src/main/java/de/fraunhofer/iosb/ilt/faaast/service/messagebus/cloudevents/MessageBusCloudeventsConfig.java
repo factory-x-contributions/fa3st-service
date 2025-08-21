@@ -16,7 +16,6 @@ package de.fraunhofer.iosb.ilt.faaast.service.messagebus.cloudevents;
 
 import de.fraunhofer.iosb.ilt.faaast.service.config.CertificateConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.messagebus.MessageBusConfig;
-
 import java.util.Objects;
 import java.util.UUID;
 
@@ -131,6 +130,7 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
     public String getEventCallbackAddress() {
         return eventCallbackAddress;
     }
+
 
     public void setEventCallbackAddress(String eventCallbackAddress) {
         this.eventCallbackAddress = eventCallbackAddress;
