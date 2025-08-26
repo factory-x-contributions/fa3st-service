@@ -63,7 +63,6 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
     private static final String EVENT_TYPE_PREFIX = "io.admin-shell.events.v1.";
     private static final String DATA_SCHEMA_PREFIX = "https://api.swaggerhub.com/domains/Plattform_i40/Part1-MetaModel-Schemas/V3.1" +
             ".0#/components/schemas/";
-    private static final String FAAAST_PREFIX = "/api/v3.0";
 
     private final Map<SubscriptionId, SubscriptionInfo> subscriptions;
     private final JsonEventSerializer serializer;
@@ -142,7 +141,7 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
 
 
     private CloudEventBuilder createAasCloudEventBuilder(ElementChangeEventMessage message) throws JsonProcessingException, URISyntaxException {
-        var sourceUri = new URI(config.getEventCallbackAddress() + FAAAST_PREFIX + "/shells/" +
+        var sourceUri = new URI(config.getEventCallbackAddress() + "/shells/" +
                 base64Encode(message.getElement().getKeys().get(0).getValue()));
 
         return createCloudEventBuilder(message)
@@ -153,7 +152,7 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
 
     private CloudEvent SubmodelValueChanged(ElementUpdateEventMessage message) throws URISyntaxException, JsonProcessingException {
         var properties = message.getElement().getKeys();
-        URI source = new URI(config.getEventCallbackAddress() + FAAAST_PREFIX + "/submodels/" +
+        URI source = new URI(config.getEventCallbackAddress() + "/submodels/" +
                 base64Encode(properties.get(0).getValue()));
 
         if (properties.size() > 1) {
@@ -181,7 +180,7 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
 
     private CloudEventBuilder createSubmodelCloudEventBuilder(ElementChangeEventMessage message) throws JsonProcessingException, URISyntaxException {
         var elementPath = message.getElement().getKeys();
-        StringBuilder source = new StringBuilder(config.getEventCallbackAddress() + FAAAST_PREFIX + "/submodels/" +
+        StringBuilder source = new StringBuilder(config.getEventCallbackAddress() + "/submodels/" +
                 base64Encode(elementPath.get(0).getValue()));
 
         if (elementPath.size() > 1) {
