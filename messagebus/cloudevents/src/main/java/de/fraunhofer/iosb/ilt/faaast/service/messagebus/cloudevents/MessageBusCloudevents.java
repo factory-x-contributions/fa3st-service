@@ -58,6 +58,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsConfig> {
 
+    public static final String PUBLISH_ERROR_MSG = "%s publishing event via Cloudevents MQTT message bus for message type %s";
+
     private static final String EVENT_TYPE_PREFIX = "io.admin-shell.events.v1.";
     private static final String DATA_SCHEMA_PREFIX = "https://api.swaggerhub.com/domains/Plattform_i40/Part1-MetaModel-Schemas/V3.1" +
             ".0#/components/schemas/";
@@ -103,9 +105,9 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
                 client.publish(config.getTopicPrefix(), objectMapper.writeValueAsString(cloudMessage));
             }
         }
-        catch (Exception e) {
-            throw new MessageBusException(String.format("Error publishing event via Cloudevents MQTT message bus for message type {s}",
-                    message.getClass()), e);
+        catch (JsonProcessingException | URISyntaxException publishException) {
+            throw new MessageBusException(String.format(PUBLISH_ERROR_MSG, publishException.getClass().getSimpleName(), message.getClass()),
+                    publishException);
         }
     }
 
