@@ -118,7 +118,7 @@ jobs:
         id: mvn-build
         run: | # TODO remove -DskipTests
           mvn -B -ntp clean install -DskipTests
-          echo "artifact_file=$(mvn -pl starter -Dexec.executable='echo' -Dexec.args='${project.build.finalName}' exec:exec -q)" >> "$GITHUB_OUTPUT"
+          echo "artifact_file=$(mvn -pl starter -Dexec.executable='echo' -Dexec.args='${project.build.finalName}' exec:exec -q).jar" >> $GITHUB_OUTPUT
           echo "Hello World"
           echo $(mvn -pl starter -Dexec.executable='echo' -Dexec.args='${project.build.finalName}' exec:exec -q)
       - name: Log in to GHCR
