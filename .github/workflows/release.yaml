@@ -128,13 +128,7 @@ jobs:
         id: resolve-artifact
         working-directory: starter
         run: |
-          set -euo pipefail
-          file="$(ls -1t starter/target/starter-*.jar | head -n1 | sed 's|^starter/target/||')"
-          if [[ -z "${file:-}" ]]; then
-            echo "No starter-*.jar found in starter/target" >&2
-            exit 1
-          fi
-          echo "artifact_file=$(basename "$file")" >> "$GITHUB_OUTPUT"
+          echo "artifact_file=$(mvn -pl starter -Dexec.executable='echo' -Dexec.args='${project.build.finalName}' exec:exec -q) >> "$GITHUB_OUTPUT"
 
       - name: Build Docker image
         working-directory: starter
