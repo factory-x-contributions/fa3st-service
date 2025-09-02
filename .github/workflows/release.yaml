@@ -90,16 +90,16 @@ jobs:
       - name: Check dependencies before release
         uses: ./.github/actions/generate-and-check-dependencies
         with:
-          run: strict
-      #      - name: Replace published DEPENDENCIES file link in NOTICE with the one just created
-      #        run: sed -i "s#\[DEPENDENCIES\]\(.*\)#\[DEPENDENCIES\]\(DEPENDENCIES\)#g" NOTICE.md
-      - name: Bump version in gradle.properties
-        run: |-
-          # replace the project's (default) version, could be overwritten later with the -Pversion=... flag
-          sed -i  's/version=.*/version=${{ inputs.version }}/g' gradle.properties
-        env:
-          GITHUB_PACKAGE_USERNAME: ${{ github.actor }}
-          GITHUB_PACKAGE_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          run: standard
+      #- name: Replace published DEPENDENCIES file link in NOTICE with the one just created
+      #  run: sed -i "s#\[DEPENDENCIES\]\(.*\)#\[DEPENDENCIES\]\(DEPENDENCIES\)#g" NOTICE.md
+      #- name: Bump version in gradle.properties
+      #  run: |-
+      #    # replace the project's (default) version, could be overwritten later with the -Pversion=... flag
+      #    sed -i  's/version=.*/version=${{ inputs.version }}/g' gradle.properties
+      #  env:
+      #    GITHUB_PACKAGE_USERNAME: ${{ github.actor }}
+      #    GITHUB_PACKAGE_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
       #- name: Bump version in /charts
       #  uses: mikefarah/yq@v4.45.1
       #  with:
