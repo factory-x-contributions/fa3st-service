@@ -128,7 +128,7 @@ jobs:
         id: resolve-artifact
         working-directory: starter
         run: |
-          echo "artifact_file=$(mvn -pl starter -Dexec.executable='echo' -Dexec.args='${project.build.finalName}' exec:exec -q) >> "$GITHUB_OUTPUT"
+          echo "artifact_file=$(mvn -pl starter -Dexec.executable='echo' -Dexec.args='${project.build.finalName}' exec:exec -q)" >> "$GITHUB_OUTPUT"
 
       - name: Build Docker image
         working-directory: starter
