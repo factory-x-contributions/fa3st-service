@@ -133,7 +133,7 @@ jobs:
           IMAGE_TAG: ${{ inputs.version }}
         run: |
           docker build \
-            --build-arg ARTIFACT_FILE='$artifact_file' \
+            --build-arg ARTIFACT_FILE="$artifact_file" \
             -t "${IMAGE_NAME}:${IMAGE_TAG}" .
 
       - name: Tag image for docker registry
