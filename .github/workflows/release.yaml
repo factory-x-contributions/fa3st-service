@@ -118,9 +118,7 @@ jobs:
         id: mvn-build
         run: | # TODO remove -DskipTests
           mvn -B -ntp clean install -DskipTests
-          echo "artifact_file=$(mvn -pl starter -Dexec.executable='echo' -Dexec.args='${project.build.finalName}' exec:exec -q).jar" >> $GITHUB_OUTPUT
-          echo "Hello World"
-          echo $(mvn -pl starter -Dexec.executable='echo' -Dexec.args='${project.build.finalName}' exec:exec -q)
+          echo "artifact_file=$(mvn -pl starter -Dexec.executable='echo' -Dexec.args='${project.build.finalName}' exec:exec -q).jar" >> "$GITHUB_ENV"
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
@@ -131,12 +129,11 @@ jobs:
       - name: Build Docker image
         working-directory: starter
         env:
-          ARTIFACT_FILE: ${{ steps.mvn-build.outputs.artifact_file }}
           IMAGE_NAME: ${{ env.IMAGE }}
           IMAGE_TAG: ${{ inputs.version }}
         run: |
           docker build \
-            --build-arg ARTIFACT_FILE='${ARTIFACT_FILE}' \
+            --build-arg ARTIFACT_FILE='$artifact_file' \
             -t "${IMAGE_NAME}:${IMAGE_TAG}" .
 
       - name: Tag image for docker registry
