@@ -114,8 +114,10 @@ jobs:
           cache-dependency-path: 'pom.xml'
 
       - name: Build with Maven
+        id: mvn-build
         run: | # TODO remove -DskipTests
           mvn -B -ntp clean install -DskipTests
+          echo "artifact_file=$(mvn -pl starter -Dexec.executable='echo' -Dexec.args='${project.build.finalName}' exec:exec -q)" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -124,16 +126,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Resolve artifact file
-        id: resolve-artifact
-        working-directory: starter
-        run: |
-          echo "artifact_file=$(mvn -pl starter -Dexec.executable='echo' -Dexec.args='${project.build.finalName}' exec:exec -q)" >> "$GITHUB_OUTPUT"
-
       - name: Build Docker image
         working-directory: starter
         env:
-          ARTIFACT_FILE: ${{ steps.resolve-artifact.outputs.artifact_file }}
+          ARTIFACT_FILE: ${{ steps.mvn-build.outputs.artifact_file }}
           IMAGE_NAME: ${{ env.IMAGE }}
           IMAGE_TAG: ${{ inputs.version }}
         run: |
