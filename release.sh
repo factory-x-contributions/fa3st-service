@@ -79,54 +79,57 @@ function updateServiceProfileUrls()
 }
 
 
-echo "Releasing:  ${VERSION},
-tagged:    v${VERSION},
-next:       ${NEXTVERSION}-SNAPSHOT
-nextBranch: ${NEXTBRANCH}"
-echo "Press enter to go"
-read -s
+function doRelease()
+{
+  echo "Releasing:  ${VERSION},
+  tagged:    v${VERSION},
+  next:       ${NEXTVERSION}-SNAPSHOT
+  nextBranch: ${NEXTBRANCH}"
+  echo "Press enter to go"
+  read -s
 
-echo "Replacing version numbers"
-mvn -B versions:set -DgenerateBackupPoms=false -DnewVersion="${VERSION}"
-sed -i 's/<tag>HEAD<\/tag>/<tag>v'"${VERSION}"'<\/tag>/g' pom.xml
-replaceVersion "$README_FILE" "$VERSION"
-replaceValue "$README_FILE" "$TAG_DOWNLOAD_SNAPSHOT" ""
-replaceValue "$README_FILE" "$TAG_DOWNLOAD_RELEASE" "$README_LATEST_RELEASE_VERSION_CONTENT"
-replaceVersion "$INSTALLATION_FILE" "$VERSION"
-replaceValue "$INSTALLATION_FILE" "$TAG_DOWNLOAD_SNAPSHOT" ""
-replaceValue "$INSTALLATION_FILE" "$TAG_DOWNLOAD_RELEASE" "$INSTALLATION_LATEST_RELEASE_VERSION_CONTENT"
-replaceValue "$CHANGELOG_FILE" "$TAG_CHANGELOG_HEADER" "## ${VERSION}"
-removeTag "$CHANGELOG_FILE" "$TAG_CHANGELOG_HEADER"
+  echo "Replacing version numbers"
+  mvn -B versions:set -DgenerateBackupPoms=false -DnewVersion="${VERSION}"
+  sed -i 's/<tag>HEAD<\/tag>/<tag>v'"${VERSION}"'<\/tag>/g' pom.xml
+  replaceVersion "$README_FILE" "$VERSION"
+  replaceValue "$README_FILE" "$TAG_DOWNLOAD_SNAPSHOT" ""
+  replaceValue "$README_FILE" "$TAG_DOWNLOAD_RELEASE" "$README_LATEST_RELEASE_VERSION_CONTENT"
+  replaceVersion "$INSTALLATION_FILE" "$VERSION"
+  replaceValue "$INSTALLATION_FILE" "$TAG_DOWNLOAD_SNAPSHOT" ""
+  replaceValue "$INSTALLATION_FILE" "$TAG_DOWNLOAD_RELEASE" "$INSTALLATION_LATEST_RELEASE_VERSION_CONTENT"
+  replaceValue "$CHANGELOG_FILE" "$TAG_CHANGELOG_HEADER" "## ${VERSION}"
+  removeTag "$CHANGELOG_FILE" "$TAG_CHANGELOG_HEADER"
 
-mvn -B spotless:apply
+  mvn -B spotless:apply
 
-echo "Updating thrid party license report"
-mvn clean install license:aggregate-third-party-report -P build-ci -Dmaven.test.skip=false -B
+  echo "Updating third party license report"
+  mvn clean install license:aggregate-third-party-report -P build-ci -Dmaven.test.skip=false -B
 
-echo "Git add ."
-git add .
+  echo "Git add ."
+  git add .
 
-echo "Next: git commit & Tag [enter]"
-read -s
-git commit -m "Release v${VERSION}"
-git tag -m "Release v${VERSION}" -a v"${VERSION}"
+  echo "Next: git commit & Tag [enter]"
+  read -s
+  git commit -m "Release v${VERSION}"
+  git tag -m "Release v${VERSION}" -a v"${VERSION}"
 
-echo "Next: replacing version nubmers [enter]"
-read -s
-mvn versions:set -DgenerateBackupPoms=false -DnewVersion="${NEXTVERSION}"-SNAPSHOT
-sed -i 's/<tag>v'"${VERSION}"'<\/tag>/<tag>'"${NEXTBRANCH}"'<\/tag>/g' pom.xml
-replaceValue "$README_FILE" "$TAG_DOWNLOAD_SNAPSHOT" "$README_LATEST_SNAPSHOT_VERSION_CONTENT"
-replaceValue "$INSTALLATION_FILE" "$TAG_DOWNLOAD_SNAPSHOT" "$INSTALLATION_LATEST_SNAPSHOT_VERSION_CONTENT"
-sed -i "2 i <!--start:${TAG_CHANGELOG_HEADER}-->\\n<!--end:${TAG_CHANGELOG_HEADER}-->" "$CHANGELOG_FILE"
-replaceValue "$CHANGELOG_FILE" "$TAG_CHANGELOG_HEADER" "## ${NEXTVERSION}-SNAPSHOT (current development version)"
-updateServiceProfileUrls $NEXTVERSION
-mvn -B spotless:apply
+  echo "Next: replacing version numbers [enter]"
+  read -s
+  # mvn versions:set -DgenerateBackupPoms=false -DnewVersion="${NEXTVERSION}"-SNAPSHOT
+  sed -i 's/<tag>v'"${VERSION}"'<\/tag>/<tag>'"${NEXTBRANCH}"'<\/tag>/g' pom.xml
+  replaceValue "$README_FILE" "$TAG_DOWNLOAD_SNAPSHOT" "$README_LATEST_SNAPSHOT_VERSION_CONTENT"
+  replaceValue "$INSTALLATION_FILE" "$TAG_DOWNLOAD_SNAPSHOT" "$INSTALLATION_LATEST_SNAPSHOT_VERSION_CONTENT"
+  sed -i "2 i <!--start:${TAG_CHANGELOG_HEADER}-->\\n<!--end:${TAG_CHANGELOG_HEADER}-->" "$CHANGELOG_FILE"
+  # replaceValue "$CHANGELOG_FILE" "$TAG_CHANGELOG_HEADER" "## ${NEXTVERSION}-SNAPSHOT (current development version)"
+  # updateServiceProfileUrls $NEXTVERSION
+  mvn -B spotless:apply
 
-echo "Git add ."
-git add .
+  echo "Git add ."
+  git add .
 
-echo "Next: git commit [enter]"
-read -s
-git commit -m "Prepare for next development iteration"
+  echo "Next: git commit [enter]"
+  read -s
+  git commit -m "Prepare for next development iteration"
 
-echo "Done"
+  echo "Done"
+}
