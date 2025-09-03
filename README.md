@@ -40,7 +40,7 @@ The features of FA³ST Service include
 [Download latest RELEASE version (0.1.9-cloudevents)](not published on maven repositories)<!--end:download-release-->
 
 <!--start:download-snapshot-->
-<!--end:download-snapshot-->
+[Download latest SNAPSHOT version (0.1.9-cloudevents-SNAPSHOT)](not published on maven repositories)<!--end:download-snapshot-->
 
 ### As Maven Dependency
 ```xml

@@ -159,7 +159,7 @@ jobs:
       #  run: sed -i "s#\[DEPENDENCIES\]\(.*\)#\[DEPENDENCIES\]\(DEPENDENCIES\)#g" NOTICE.md
       - name: Bump version in docs
         run: |-
-          ./release.sh ${{ inputs.version }} ${{ inputs.version }}
+          ./release.sh ${{ inputs.version }} ${{ inputs.next-version }}
       - name: Push new branch
         run: git push origin ${{ needs.validate-and-prepare.outputs.branch_name }}
       - name: Create pull request

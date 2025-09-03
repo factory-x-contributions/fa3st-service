@@ -10,7 +10,7 @@
 {download}`Latest RELEASE version (0.1.9-cloudevents) (not published on maven repositories)`<!--end:download-release-->
 
 <!--start:download-snapshot-->
-<!--end:download-snapshot-->
+{download}`Latest SNAPSHOT version (0.1.9-cloudevents-SNAPSHOT) (not published on maven repositories)`<!--end:download-snapshot-->
 
 ## Maven Dependency
 

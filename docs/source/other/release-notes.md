@@ -1,4 +1,6 @@
 # Release Notes
+<!--start:changelog-header-->
+## 0.1.9-cloudevents-SNAPSHOT (current development version)<!--end:changelog-header-->
 ## 0.1.9-cloudevents
 ## 1.0
 
