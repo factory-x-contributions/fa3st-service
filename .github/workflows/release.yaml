@@ -32,9 +32,6 @@ on:
       version:
         description: 'The version you want to release. Ref should be either main for latest releases or a tag for bugfixes.'
         required: true
-      next-version:
-        description: 'The next version to publish as SNAPSHOT.'
-        required: true
 
 env:
   REGISTRY: ghcr.io
@@ -157,9 +154,24 @@ jobs:
 
       #- name: Replace published DEPENDENCIES file link in NOTICE with the one just created
       #  run: sed -i "s#\[DEPENDENCIES\]\(.*\)#\[DEPENDENCIES\]\(DEPENDENCIES\)#g" NOTICE.md
+      - name: Get current version for doc-version-bump
+        id: get-current-version
+        run: |-
+          echo "current_version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> "$GITHUB_ENV"
+      - name: Bump version in _all_ pom.xml
+        run: |- # TODO do we want this? this would update every pom's version.
+          mvn -B -ntp versions:set -DnewVersion='${{ inputs.version }}' -DgenerateBackupPoms=false -DprocessAllModules=true
       - name: Bump version in docs
         run: |-
-          ./release.sh ${{ inputs.version }} ${{ inputs.version }}
+          source release.sh
+
+      - name: Commit manifest files
+        id: make-commit
+        run: |
+          git add .
+          git commit --message "Prepare release ${{ inputs.version }}"
+
+          echo "commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
       - name: Push new branch
         run: git push origin ${{ needs.validate-and-prepare.outputs.branch_name }}
       - name: Create pull request
