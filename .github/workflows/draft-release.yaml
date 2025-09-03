@@ -35,7 +35,7 @@ on:
 
 env:
   # One submodule cannot be built (authorization required) so we get the released version of it
-  UPSTREAM_LATEST_VERSION: $UPSTREAM_LATEST_VERSION
+  UPSTREAM_LATEST_VERSION: 1.3.0-SNAPSHOT
 
 jobs:
   validate-and-prepare:
