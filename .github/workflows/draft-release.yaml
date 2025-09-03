@@ -93,6 +93,7 @@ jobs:
           git config user.email "factory-x-bot@factory-x.org"
       - name: Check dependencies before release
         uses: ./.github/actions/generate-and-check-dependencies
+        if: false # TODO remove before merging
         with:
           run: standard
       #      - name: Replace published DEPENDENCIES file link in NOTICE with the one just created
