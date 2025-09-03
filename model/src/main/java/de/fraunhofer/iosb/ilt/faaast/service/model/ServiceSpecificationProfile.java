@@ -451,11 +451,11 @@ public enum ServiceSpecificationProfile {
                     GenerateSerializationByIdsRequest.class,
                     GetSelfDescriptionRequest.class)),
     FAAAST_IMPORT(
-            "https://github.com/FraunhoferIOSB/FAAAST-Service/API/1/3/Import",
+            "https://github.com/FraunhoferIOSB/FAAAST-Service/API///Import",
             List.of(),
             List.of(ImportRequest.class)),
     FAAAST_RESET(
-            "https://github.com/FraunhoferIOSB/FAAAST-Service/API/1/3/Reset",
+            "https://github.com/FraunhoferIOSB/FAAAST-Service/API///Reset",
             List.of(),
             List.of(ResetRequest.class));
 

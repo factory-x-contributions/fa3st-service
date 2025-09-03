@@ -14,10 +14,10 @@ TAG_CHANGELOG_HEADER="changelog-header"
 CHANGELOG_FILE="./docs/source/other/release-notes.md"
 README_FILE="README.md"
 INSTALLATION_FILE="./docs/source/basics/installation.md"
-README_LATEST_RELEASE_VERSION_CONTENT="[Download latest RELEASE version \($VERSION\)]\(https:\/\/repo1.maven.org\/maven2\/de\/fraunhofer\/iosb\/ilt\/faaast\/service\/starter\/${VERSION}\/starter-${VERSION}.jar\)"
-README_LATEST_SNAPSHOT_VERSION_CONTENT="[Download latest SNAPSHOT version \($NEXTVERSION\-SNAPSHOT)]\(https:\/\/oss.sonatype.org\/service\/local\/artifact\/maven\/redirect?r=snapshots\&g=de\.fraunhofer\.iosb\.ilt\.faaast\.service\&a=starter\&v=${NEXTVERSION}-SNAPSHOT\)"
-INSTALLATION_LATEST_RELEASE_VERSION_CONTENT="{download}\`Latest RELEASE version \($VERSION\) <https:\/\/repo1.maven.org\/maven2\/de\/fraunhofer\/iosb\/ilt\/faaast\/service\/starter\/${VERSION}\/starter-${VERSION}.jar>\`"
-INSTALLATION_LATEST_SNAPSHOT_VERSION_CONTENT="{download}\`Latest SNAPSHOT version \($NEXTVERSION\-SNAPSHOT) <https:\/\/oss.sonatype.org\/service\/local\/artifact\/maven\/redirect?r=snapshots\&g=de\.fraunhofer\.iosb\.ilt\.faaast\.service\&a=starter\&v=${NEXTVERSION}-SNAPSHOT>\`"
+README_LATEST_RELEASE_VERSION_CONTENT="[Download latest RELEASE version \($VERSION\)]\(not published on maven repositories\)"
+README_LATEST_SNAPSHOT_VERSION_CONTENT="[Download latest SNAPSHOT version \($NEXTVERSION\-SNAPSHOT)]\(not published on maven repositories\)"
+INSTALLATION_LATEST_RELEASE_VERSION_CONTENT="{download}\`Latest RELEASE version \($VERSION\) \(not published on maven repositories\)\`"
+INSTALLATION_LATEST_SNAPSHOT_VERSION_CONTENT="{download}\`Latest SNAPSHOT version \($NEXTVERSION\-SNAPSHOT) \(not published on maven repositories\)\`"
 
 # arguments: tag
 function startTag()
@@ -78,78 +78,49 @@ function updateServiceProfileUrls()
 	sed -i "s|https://github.com/FraunhoferIOSB/FAAAST-Service/API/[0-9]*\/[0-9]*\/|https://github.com/FraunhoferIOSB/FAAAST-Service/API/$major/$minor/|g" "$file"
 }
 
-function fxRelease()
-{
-  echo "Replacing version numbers"
-  mvn -B versions:set -DgenerateBackupPoms=false -DnewVersion="${VERSION}"
-  sed -i 's/<tag>HEAD<\/tag>/<tag>v'"${VERSION}"'<\/tag>/g' pom.xml
-  replaceVersion "$README_FILE" "$VERSION"
-  replaceValue "$README_FILE" "$TAG_DOWNLOAD_SNAPSHOT" ""
-  replaceValue "$README_FILE" "$TAG_DOWNLOAD_RELEASE" "$README_LATEST_RELEASE_VERSION_CONTENT"
-  replaceVersion "$INSTALLATION_FILE" "$VERSION"
-  replaceValue "$INSTALLATION_FILE" "$TAG_DOWNLOAD_SNAPSHOT" ""
-  replaceValue "$INSTALLATION_FILE" "$TAG_DOWNLOAD_RELEASE" "$INSTALLATION_LATEST_RELEASE_VERSION_CONTENT"
-  replaceValue "$CHANGELOG_FILE" "$TAG_CHANGELOG_HEADER" "## ${VERSION}"
-  removeTag "$CHANGELOG_FILE" "$TAG_CHANGELOG_HEADER"
+echo "Releasing:  ${VERSION},
+tagged:    v${VERSION},
+next:       ${NEXTVERSION}-SNAPSHOT
+nextBranch: ${NEXTBRANCH}"
 
-  mvn -B spotless:apply
+echo "Replacing version numbers"
+mvn -B versions:set -DgenerateBackupPoms=false -DnewVersion="${VERSION}"
+sed -i 's/<tag>HEAD<\/tag>/<tag>v'"${VERSION}"'<\/tag>/g' pom.xml
+replaceVersion "$README_FILE" "$VERSION"
+replaceValue "$README_FILE" "$TAG_DOWNLOAD_SNAPSHOT" ""
+replaceValue "$README_FILE" "$TAG_DOWNLOAD_RELEASE" "$README_LATEST_RELEASE_VERSION_CONTENT"
+replaceVersion "$INSTALLATION_FILE" "$VERSION"
+replaceValue "$INSTALLATION_FILE" "$TAG_DOWNLOAD_SNAPSHOT" ""
+replaceValue "$INSTALLATION_FILE" "$TAG_DOWNLOAD_RELEASE" "$INSTALLATION_LATEST_RELEASE_VERSION_CONTENT"
+replaceValue "$CHANGELOG_FILE" "$TAG_CHANGELOG_HEADER" "## ${VERSION}"
+removeTag "$CHANGELOG_FILE" "$TAG_CHANGELOG_HEADER"
 
-  echo "Updating third party license report"
-  mvn clean install license:aggregate-third-party-report -P build-ci -Dmaven.test.skip=false -B
-}
+mvn -B spotless:apply
 
+echo "Updating third party license report"
+mvn clean install license:aggregate-third-party-report -P build-ci -Dmaven.test.skip=true -B
 
-function fhRelease()
-{
-  echo "Releasing:  ${VERSION},
-  tagged:    v${VERSION},
-  next:       ${NEXTVERSION}-SNAPSHOT
-  nextBranch: ${NEXTBRANCH}"
-  echo "Press enter to go"
-  read -s
+echo "Git add ."
+git add .
 
-  echo "Replacing version numbers"
-  mvn -B versions:set -DgenerateBackupPoms=false -DnewVersion="${VERSION}"
-  sed -i 's/<tag>HEAD<\/tag>/<tag>v'"${VERSION}"'<\/tag>/g' pom.xml
-  replaceVersion "$README_FILE" "$VERSION"
-  replaceValue "$README_FILE" "$TAG_DOWNLOAD_SNAPSHOT" ""
-  replaceValue "$README_FILE" "$TAG_DOWNLOAD_RELEASE" "$README_LATEST_RELEASE_VERSION_CONTENT"
-  replaceVersion "$INSTALLATION_FILE" "$VERSION"
-  replaceValue "$INSTALLATION_FILE" "$TAG_DOWNLOAD_SNAPSHOT" ""
-  replaceValue "$INSTALLATION_FILE" "$TAG_DOWNLOAD_RELEASE" "$INSTALLATION_LATEST_RELEASE_VERSION_CONTENT"
-  replaceValue "$CHANGELOG_FILE" "$TAG_CHANGELOG_HEADER" "## ${VERSION}"
-  removeTag "$CHANGELOG_FILE" "$TAG_CHANGELOG_HEADER"
+echo "Next: git commit & Tag"
+git commit -m "Release v${VERSION}"
+git tag -m "Release v${VERSION}" -a v"${VERSION}"
 
-  mvn -B spotless:apply
+echo "Next: replacing version numbers"
+mvn versions:set -DgenerateBackupPoms=false -DnewVersion="${NEXTVERSION}"-SNAPSHOT
+sed -i 's/<tag>v'"${VERSION}"'<\/tag>/<tag>'"${NEXTBRANCH}"'<\/tag>/g' pom.xml
+replaceValue "$README_FILE" "$TAG_DOWNLOAD_SNAPSHOT" "$README_LATEST_SNAPSHOT_VERSION_CONTENT"
+replaceValue "$INSTALLATION_FILE" "$TAG_DOWNLOAD_SNAPSHOT" "$INSTALLATION_LATEST_SNAPSHOT_VERSION_CONTENT"
+sed -i "2 i <!--start:${TAG_CHANGELOG_HEADER}-->\\n<!--end:${TAG_CHANGELOG_HEADER}-->" "$CHANGELOG_FILE"
+replaceValue "$CHANGELOG_FILE" "$TAG_CHANGELOG_HEADER" "## ${NEXTVERSION}-SNAPSHOT (current development version)"
+updateServiceProfileUrls $NEXTVERSION
+mvn -B spotless:apply
 
-  echo "Updating third party license report"
-  mvn clean install license:aggregate-third-party-report -P build-ci -Dmaven.test.skip=false -B
+echo "Git add ."
+git add .
 
-  echo "Git add ."
-  git add .
+echo "Next: git commit"
+git commit -m "Prepare for next development iteration"
 
-  echo "Next: git commit & Tag [enter]"
-  read -s
-  git commit -m "Release v${VERSION}"
-  git tag -m "Release v${VERSION}" -a v"${VERSION}"
-
-  echo "Next: replacing version numbers [enter]"
-  read -s
-  # mvn versions:set -DgenerateBackupPoms=false -DnewVersion="${NEXTVERSION}"-SNAPSHOT
-  sed -i 's/<tag>v'"${VERSION}"'<\/tag>/<tag>'"${NEXTBRANCH}"'<\/tag>/g' pom.xml
-  replaceValue "$README_FILE" "$TAG_DOWNLOAD_SNAPSHOT" "$README_LATEST_SNAPSHOT_VERSION_CONTENT"
-  replaceValue "$INSTALLATION_FILE" "$TAG_DOWNLOAD_SNAPSHOT" "$INSTALLATION_LATEST_SNAPSHOT_VERSION_CONTENT"
-  sed -i "2 i <!--start:${TAG_CHANGELOG_HEADER}-->\\n<!--end:${TAG_CHANGELOG_HEADER}-->" "$CHANGELOG_FILE"
-  # replaceValue "$CHANGELOG_FILE" "$TAG_CHANGELOG_HEADER" "## ${NEXTVERSION}-SNAPSHOT (current development version)"
-  # updateServiceProfileUrls $NEXTVERSION
-  mvn -B spotless:apply
-
-  echo "Git add ."
-  git add .
-
-  echo "Next: git commit [enter]"
-  read -s
-  git commit -m "Prepare for next development iteration"
-
-  echo "Done"
-}
+echo "Done"
