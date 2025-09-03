@@ -96,8 +96,8 @@ jobs:
           mvn versions:set -DgenerateBackupPoms=false -DnewVersion=${{ inputs.version }}
       - name: Replace unbuildable local dependency versions with upstream released
         run: |-
-          sed -i '/<artifactId>endpoint-opcua<\/artifactId>/,/<\/dependency>/{ s#<version>[^<]*</version>#<version>$UPSTREAM_LATEST_VERSION</version># }' starter/pom.xml
-          sed -i '/<artifactId>endpoint-opcua<\/artifactId>/,/<\/dependency>/{ s#<version>[^<]*</version>#<version>$UPSTREAM_LATEST_VERSION</version># }' test/pom.xml
+          sed -i "/<artifactId>endpoint-opcua<\/artifactId>/,/<\/dependency>/{ s#<version>[^<]*</version>#<version>$UPSTREAM_LATEST_VERSION</version># }" starter/pom.xml
+          sed -i "/<artifactId>endpoint-opcua<\/artifactId>/,/<\/dependency>/{ s#<version>[^<]*</version>#<version>$UPSTREAM_LATEST_VERSION</version># }" test/pom.xml
       - name: Update project docs
         run: |
           ./replace-versions.sh
