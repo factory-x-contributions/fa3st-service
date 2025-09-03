@@ -103,7 +103,7 @@ jobs:
           sed -i "/<artifactId>endpoint-opcua<\/artifactId>/,/<\/dependency>/{ s#<version>[^<]*</version>#<version>$UPSTREAM_LATEST_VERSION</version># }" test/pom.xml
       - name: Update project docs
         run: |
-          ./replace-versions.sh
+          ./replace-versions.sh ${{ inputs.version }}
 
       - name: Build with Maven
         id: mvn-build
