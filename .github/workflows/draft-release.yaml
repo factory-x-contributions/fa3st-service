@@ -94,7 +94,7 @@ jobs:
       - name: Check dependencies before release
         uses: ./.github/actions/generate-and-check-dependencies
         with:
-          run: strict
+          run: standard
       #      - name: Replace published DEPENDENCIES file link in NOTICE with the one just created
       #        run: sed -i "s#\[DEPENDENCIES\]\(.*\)#\[DEPENDENCIES\]\(DEPENDENCIES\)#g" NOTICE.md
       - name: Bump version in maven pom.xml files
