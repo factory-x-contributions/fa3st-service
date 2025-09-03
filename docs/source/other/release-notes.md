@@ -1,6 +1,5 @@
 # Release Notes
-<!--start:changelog-header-->
-## 1.3.0-SNAPSHOT (current development version)<!--end:changelog-header-->
+## 0.1.9-cloudevents
 
 **Internal changes & bugfixes**
 - General
