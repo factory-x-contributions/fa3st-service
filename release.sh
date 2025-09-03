@@ -78,8 +78,28 @@ function updateServiceProfileUrls()
 	sed -i "s|https://github.com/FraunhoferIOSB/FAAAST-Service/API/[0-9]*\/[0-9]*\/|https://github.com/FraunhoferIOSB/FAAAST-Service/API/$major/$minor/|g" "$file"
 }
 
+function fxRelease()
+{
+  echo "Replacing version numbers"
+  mvn -B versions:set -DgenerateBackupPoms=false -DnewVersion="${VERSION}"
+  sed -i 's/<tag>HEAD<\/tag>/<tag>v'"${VERSION}"'<\/tag>/g' pom.xml
+  replaceVersion "$README_FILE" "$VERSION"
+  replaceValue "$README_FILE" "$TAG_DOWNLOAD_SNAPSHOT" ""
+  replaceValue "$README_FILE" "$TAG_DOWNLOAD_RELEASE" "$README_LATEST_RELEASE_VERSION_CONTENT"
+  replaceVersion "$INSTALLATION_FILE" "$VERSION"
+  replaceValue "$INSTALLATION_FILE" "$TAG_DOWNLOAD_SNAPSHOT" ""
+  replaceValue "$INSTALLATION_FILE" "$TAG_DOWNLOAD_RELEASE" "$INSTALLATION_LATEST_RELEASE_VERSION_CONTENT"
+  replaceValue "$CHANGELOG_FILE" "$TAG_CHANGELOG_HEADER" "## ${VERSION}"
+  removeTag "$CHANGELOG_FILE" "$TAG_CHANGELOG_HEADER"
 
-function doRelease()
+  mvn -B spotless:apply
+
+  echo "Updating third party license report"
+  mvn clean install license:aggregate-third-party-report -P build-ci -Dmaven.test.skip=false -B
+}
+
+
+function fhRelease()
 {
   echo "Releasing:  ${VERSION},
   tagged:    v${VERSION},
