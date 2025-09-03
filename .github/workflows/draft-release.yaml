@@ -91,13 +91,6 @@ jobs:
         run: |
           git config user.name "factory-x-bot"
           git config user.email "factory-x-bot@factory-x.org"
-      - name: Check dependencies before release
-        uses: ./.github/actions/generate-and-check-dependencies
-        if: false # TODO remove before merging
-        with:
-          run: standard
-      #      - name: Replace published DEPENDENCIES file link in NOTICE with the one just created
-      #        run: sed -i "s#\[DEPENDENCIES\]\(.*\)#\[DEPENDENCIES\]\(DEPENDENCIES\)#g" NOTICE.md
       - name: Bump version in maven pom.xml files
         run: |-
           mvn versions:set -DgenerateBackupPoms=false -DnewVersion=${{ inputs.version }}
@@ -114,6 +107,15 @@ jobs:
         run: |
           mvn -B -ntp clean install -DskipTests
           echo "artifact_file=$(mvn -pl starter -Dexec.executable='echo' -Dexec.args='${project.build.finalName}' exec:exec -q).jar" >> "$GITHUB_ENV"
+      - name: Check dependencies before release
+        uses: ./.github/actions/generate-and-check-dependencies
+        if: false # TODO remove before merging
+        with:
+          run: standard
+      #      - name: Replace published DEPENDENCIES file link in NOTICE with the one just created
+      #        run: sed -i "s#\[DEPENDENCIES\]\(.*\)#\[DEPENDENCIES\]\(DEPENDENCIES\)#g" NOTICE.md
+
+
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
