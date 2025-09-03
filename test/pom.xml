@@ -4,7 +4,7 @@
     <parent>
         <groupId>de.fraunhofer.iosb.ilt.faaast.service</groupId>
         <artifactId>service</artifactId>
-        <version>1.3.0-SNAPSHOT</version>
+        <version>v0.1.1-cloudevents</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <groupId>de.fraunhofer.iosb.ilt.faaast.service</groupId>
@@ -55,7 +55,7 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>endpoint-opcua</artifactId>
-            <version>1.3.0-SNAPSHOT</version>
+            <version>v0.1.1-cloudevents</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
