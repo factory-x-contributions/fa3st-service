@@ -30,13 +30,12 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'The version you want to release. Ref should be either main for latest releases or a tag for bugfixes.'
+        description: 'The version you want to release. Ref should be either main for latest releases or a tag for bugfixes. '
         required: true
 
 env:
-  REGISTRY: ghcr.io
-  ORG: ${{ github.repository_owner }}
-  IMAGE: ${{ github.event.repository.name }}
+  # One submodule cannot be built (authorization required) so we get the released version of it
+  UPSTREAM_LATEST_VERSION: $UPSTREAM_LATEST_VERSION
 
 jobs:
   validate-and-prepare:
@@ -94,29 +93,24 @@ jobs:
           git config user.email "factory-x-bot@factory-x.org"
       - name: Check dependencies before release
         uses: ./.github/actions/generate-and-check-dependencies
-        if: false # TODO
         with:
-          run: standard
-
-      - name: Cache maven repository
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.m2/repository
-            ~/.sonar/cache
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-maven
-      - name: Set up JDK and Caching
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: 17
-          cache: 'maven'
-          cache-dependency-path: 'pom.xml'
+          run: strict
+      #      - name: Replace published DEPENDENCIES file link in NOTICE with the one just created
+      #        run: sed -i "s#\[DEPENDENCIES\]\(.*\)#\[DEPENDENCIES\]\(DEPENDENCIES\)#g" NOTICE.md
+      - name: Bump version in maven pom.xml files
+        run: |-
+          mvn versions:set -DgenerateBackupPoms=false -DnewVersion=${{ inputs.version }}
+      - name: Replace unbuildable local dependency versions with upstream released
+        run: |-
+          sed -i '/<artifactId>endpoint-opcua<\/artifactId>/,/<\/dependency>/{ s#<version>[^<]*</version>#<version>$UPSTREAM_LATEST_VERSION</version># }' starter/pom.xml
+          sed -i '/<artifactId>endpoint-opcua<\/artifactId>/,/<\/dependency>/{ s#<version>[^<]*</version>#<version>$UPSTREAM_LATEST_VERSION</version># }' test/pom.xml
+      - name: Update project docs
+        run: |
+          ./replace-versions.sh
 
       - name: Build with Maven
         id: mvn-build
-        run: | # TODO remove -DskipTests
+        run: |
           mvn -B -ntp clean install -DskipTests
           echo "artifact_file=$(mvn -pl starter -Dexec.executable='echo' -Dexec.args='${project.build.finalName}' exec:exec -q).jar" >> "$GITHUB_ENV"
       - name: Log in to GHCR
@@ -135,7 +129,6 @@ jobs:
           docker build \
             --build-arg ARTIFACT_FILE="$artifact_file" \
             -t "${IMAGE_NAME}:${IMAGE_TAG}" .
-
       - name: Tag image for docker registry
         run: docker tag "${IMAGE_NAME}:${IMAGE_TAG}" "${REGISTRY}/${ORG}/${IMAGE_NAME}:${IMAGE_TAG}"
         env:
@@ -152,12 +145,15 @@ jobs:
           IMAGE_NAME: ${{ env.IMAGE }}
           IMAGE_TAG: ${{ inputs.version }}
 
-      #- name: Replace published DEPENDENCIES file link in NOTICE with the one just created
-      #  run: sed -i "s#\[DEPENDENCIES\]\(.*\)#\[DEPENDENCIES\]\(DEPENDENCIES\)#g" NOTICE.md
-      - name: Bump version in docs
-        run: |-
-          ./release.sh ${{ inputs.version }}
+      - name: Commit manifest files
+        id: make-commit
+        run: |
+          git add .
+          git commit --message "Prepare release ${{ inputs.version }}"
 
+          echo "commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+      - name: Push new branch
+        run: git push origin ${{ needs.validate-and-prepare.outputs.branch_name }}
       - name: Create pull request
         if: ${{ github.ref_name == 'main' }}
         uses: thomaseizinger/create-pull-request@1.4.0

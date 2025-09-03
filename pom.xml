@@ -472,7 +472,6 @@
             <id>build-ci</id>
             <modules>
                 <module>checks</module>
-                <module>endpoint/opcua</module>
                 <module>examples/assetconnection-custom</module>
                 <module>test</module>
             </modules>
