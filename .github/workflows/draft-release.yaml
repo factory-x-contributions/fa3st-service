@@ -104,7 +104,6 @@ jobs:
       - name: Update project docs
         run: |
           ./replace-versions.sh ${{ inputs.version }}
-
       - name: Build with Maven
         id: mvn-build
         run: |

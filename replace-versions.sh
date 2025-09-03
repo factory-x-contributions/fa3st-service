@@ -72,6 +72,10 @@ replaceValue "$INSTALLATION_FILE" "$TAG_DOWNLOAD_RELEASE" "$INSTALLATION_LATEST_
 replaceValue "$CHANGELOG_FILE" "$TAG_CHANGELOG_HEADER" "## ${VERSION}"
 removeTag "$CHANGELOG_FILE" "$TAG_CHANGELOG_HEADER"
 
+echo "build project (no tests) to apply version changes"
+mvn clean install -DskipTests
+
+echo "Apply maven spotless"
 mvn -B spotless:apply
 
 echo "Updating third party license report" # TODO dont skip test, spotless
