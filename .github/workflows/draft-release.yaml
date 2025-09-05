@@ -1,0 +1,163 @@
+#################################################################################
+#  Copyright (c) 2024 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)
+#  Copyright (c) 2021,2023 Contributors to the Eclipse Foundation
+#  Copyright (c) 2025 SAP SE
+#  Copyright (c) 2025 Fraunhofer Institute of Optronics, System Technologies
+#  and Image Exploitation (Fraunhofer IOSB)
+#
+#  See the NOTICE file(s) distributed with this work for additional
+#  information regarding copyright ownership.
+#
+#  This program and the accompanying materials are made available under the
+#  terms of the Apache License, Version 2.0 which is available at
+#  https://www.apache.org/licenses/LICENSE-2.0.
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#  License for the specific language governing permissions and limitations
+#  under the License.
+#
+#  SPDX-License-Identifier: Apache-2.0
+#################################################################################
+
+
+---
+name: "Draft Release"
+run-name: "Draft Release ${{ inputs.version }} from ${{ github.ref_name }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'The version you want to release. Ref should be either main for latest releases or a tag for bugfixes. '
+        required: true
+
+env:
+  # One submodule cannot be built (authorization required) so we get the released version of it
+  UPSTREAM_LATEST_VERSION: 1.3.0-SNAPSHOT
+  REGISTRY: ghcr.io
+  ORG: ${{ github.repository_owner }}
+  IMAGE: ${{ github.event.repository.name }}
+
+jobs:
+  validate-and-prepare:
+    name: "Validate that tag does not already exist and prepare branch"
+    runs-on: ubuntu-latest
+    if: ${{ github.ref_name == 'main' || startsWith(github.ref, 'refs/tags/') }}
+    outputs:
+      branch_name: ${{ steps.resolve_branch.outputs.branch_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: check-tag
+        name: "Check if tag exists"
+        run: |-
+
+          tag=$(git tag -l ${{ inputs.version }})
+
+          if [ ! -z $tag ];
+          then
+            echo "Tag already exists! Please choose another tag."
+            exit 1
+          fi
+      - id: resolve_branch
+        name: "Resolve branch prefix (release or bugfix)"
+        run: |
+
+          if [[ ${{ github.ref_name }} == "main" ]];
+          then
+            echo "branch_name=release/${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          elif [[ ${{ github.ref }} == refs/tags/* ]]
+          then
+            echo "branch_name=bugfix/${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "Ref branch does not match required criteria. Should either be "main" or a tag."
+            exit 1
+          fi
+
+  draft-new-release:
+    name: "Draft a new release"
+    runs-on: ubuntu-latest
+    needs: validate-and-prepare
+    permissions:
+      contents: write
+      packages: write
+      pages: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create Release or Bugfix branch
+        run: git checkout -b ${{ needs.validate-and-prepare.outputs.branch_name }}
+      - name: Initialize mandatory git config
+        run: |
+          git config user.name "factory-x-bot"
+          git config user.email "factory-x-bot@factory-x.org"
+      - name: Bump version in maven pom.xml files
+        run: |-
+          mvn versions:set -DgenerateBackupPoms=false -DnewVersion=${{ inputs.version }}
+      - name: Replace unbuildable local dependency versions with upstream released versions
+        run: |-
+          sed -i "/<artifactId>endpoint-opcua<\/artifactId>/,/<\/dependency>/{ s#<version>[^<]*</version>#<version>$UPSTREAM_LATEST_VERSION</version># }" starter/pom.xml
+          sed -i "/<artifactId>endpoint-opcua<\/artifactId>/,/<\/dependency>/{ s#<version>[^<]*</version>#<version>$UPSTREAM_LATEST_VERSION</version># }" test/pom.xml
+      # Docker build & publish
+      - name: Update project docs
+        run: |
+          ./replace_versions.sh ${{ inputs.version }}
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: ./.github/actions/setup-java
+      - name: Get jar name
+        id: get-name
+        shell: bash
+        run: |-
+          echo "artifact_name=$(mvn -pl starter -Dexec.executable='echo' -Dexec.args='${project.build.finalName}' exec:exec -q).jar" >> "$GITHUB_OUTPUT"
+      # Build docker image and push
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: starter
+          file: starter/Dockerfile
+          build-args: |
+            ARTIFACT_FILE=${{ steps.get-name.outputs.artifact_name }}
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.ORG }}/${{ env.IMAGE }}:${{ inputs.version }}
+
+      - name: Check dependencies before release
+        uses: ./.github/actions/generate-and-check-dependencies
+        with:
+          run: standard
+
+      - name: Commit manifest files
+        id: make-commit
+        run: |
+          git add .
+          git commit --message "Prepare release ${{ inputs.version }}"
+
+          echo "commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+      - name: Push new branch
+        run: git push origin ${{ needs.validate-and-prepare.outputs.branch_name }}
+      - name: Create pull request
+        if: ${{ github.ref_name == 'main' }}
+        uses: thomaseizinger/create-pull-request@1.4.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          head: ${{ needs.validate-and-prepare.outputs.branch_name }}
+          base: main
+          title: Release version ${{ inputs.version }}
+          reviewers: ${{ github.actor }}
+          body: |-
+            This PR was created in response to a manual trigger of the [draft release workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).
+            Versions have been bumped in [commit ${{ steps.make-commit.outputs.commit }}](${{ steps.make-commit.outputs.commit }}).
+
+            Merging this PR will create a GitHub release and upload any assets that are created as part of the release build.
