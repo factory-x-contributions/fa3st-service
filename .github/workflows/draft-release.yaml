@@ -123,7 +123,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Build and push
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v6
         with:
           context: starter
           file: starter/Dockerfile
@@ -131,6 +131,7 @@ jobs:
             ARTIFACT_FILE=${{ steps.get-name.outputs.artifact_name }}
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.ORG }}/${{ env.IMAGE }}:${{ inputs.version }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check dependencies before release
         uses: ./.github/actions/generate-and-check-dependencies
