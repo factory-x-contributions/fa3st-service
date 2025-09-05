@@ -39,8 +39,8 @@ jobs:
   # Gate
   validation:
     name: "Check if repository is not fork AND head is release OR base is bugfix"
-    runs-on: ubuntu-latest # TODO change to fx-contrib
-    if: ${{ github.repository == 'carlos-schmidt/fa3st-service' && (startsWith(github.event.pull_request.head.ref, 'release/') || startsWith(github.ref_name, 'bugfix/')) }}
+    runs-on: ubuntu-latest
+    if: ${{ github.repository == 'factory-x-contributions/fa3st-service' && (startsWith(github.event.pull_request.head.ref, 'release/') || startsWith(github.ref_name, 'bugfix/')) }}
     outputs:
       RELEASE_VERSION: ${{ steps.release-version.outputs.RELEASE_VERSION }}
     steps:
