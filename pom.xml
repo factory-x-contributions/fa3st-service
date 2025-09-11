@@ -472,7 +472,6 @@
             <id>build-ci</id>
             <modules>
                 <module>checks</module>
-                <module>endpoint/opcua</module>
                 <module>examples/assetconnection-custom</module>
                 <module>test</module>
             </modules>
@@ -480,76 +479,6 @@
                 <maven.javadoc.skip>true</maven.javadoc.skip>
                 <maven.test.skip>true</maven.test.skip>
             </properties>
-        </profile>
-        <profile>
-            <id>release</id>
-            <modules>
-                <module>endpoint/opcua</module>
-            </modules>
-            <properties>
-                <maven.javadoc.skip>false</maven.javadoc.skip>
-                <maven.test.skip>true</maven.test.skip>
-            </properties>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-source-plugin</artifactId>
-                        <version>${maven.plugin.source.version}</version>
-                        <executions>
-                            <execution>
-                                <id>attach-sources</id>
-                                <goals>
-                                    <goal>jar-no-fork</goal>
-                                </goals>
-                                <phase>verify</phase>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-javadoc-plugin</artifactId>
-                        <version>${maven.plugin.javadoc.version}</version>
-                        <inherited>false</inherited>
-                        <configuration>
-                            <quiet>true</quiet>
-                            <sourceFileExcludes>**/generated-sources/*</sourceFileExcludes>
-                            <sourcepath>${project.basedir}/target</sourcepath>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <id>attach-javadocs</id>
-                                <goals>
-                                    <goal>aggregate-jar</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-gpg-plugin</artifactId>
-                        <version>${maven.plugin.gpg.version}</version>
-                        <executions>
-                            <execution>
-                                <id>sign-artifacts</id>
-                                <goals>
-                                    <goal>sign</goal>
-                                </goals>
-                                <phase>verify</phase>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.sonatype.central</groupId>
-                        <artifactId>central-publishing-maven-plugin</artifactId>
-                        <version>${maven.plugin.central-publishing.version}</version>
-                        <extensions>true</extensions>
-                        <configuration>
-                            <publishingServerId>central</publishingServerId>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
         </profile>
     </profiles>
 </project>
