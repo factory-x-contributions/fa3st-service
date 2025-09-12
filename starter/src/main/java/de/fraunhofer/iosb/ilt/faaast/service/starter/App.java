@@ -566,9 +566,6 @@ public class App implements Runnable {
                 if (HttpEndpointConfig.class.isAssignableFrom(x.getClass())) {
                     LOGGER.info("HTTP endpoint available on port {}", ((HttpEndpointConfig) x).getPort());
                 }
-                else if (OpcUaEndpointConfig.class.isAssignableFrom(x.getClass())) {
-                    LOGGER.info("OPC UA endpoint available on port {}", ((OpcUaEndpointConfig) x).getTcpPort());
-                }
             });
         }
     }
