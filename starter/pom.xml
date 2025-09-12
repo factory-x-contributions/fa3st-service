@@ -48,11 +48,6 @@
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>endpoint-opcua</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
             <artifactId>filestorage-filesystem</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -291,23 +286,5 @@
             </plugin>
         </plugins>
     </build>
-    <profiles>
-        <profile>
-            <id>release</id>
-            <dependencies>
-                <dependency>
-                    <groupId>com.prosysopc.ua</groupId>
-                    <artifactId>prosys-opc-ua-sdk-client-server</artifactId>
-                    <version>${prosys.sdk.version}</version>
-                    <scope>provided</scope>
-                </dependency>
-            </dependencies>
-            <repositories>
-                <repository>
-                    <id>faaast-libs-prosys</id>
-                    <url>https://prosys-opcua.k3s.ilt-dmz.iosb.fraunhofer.de/artifactory/thirdparty-local/</url>
-                </repository>
-            </repositories>
-        </profile>
-    </profiles>
+    <profiles></profiles>
 </project>
