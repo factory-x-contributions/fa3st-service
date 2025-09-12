@@ -416,28 +416,9 @@
             </modules>
         </profile>
         <profile>
-            <id>owasp</id>
-            <modules>
-                <module>endpoint/opcua</module>
-            </modules>
-            <properties>
-                <maven.javadoc.skip>true</maven.javadoc.skip>
-                <maven.test.skip>true</maven.test.skip>
-            </properties>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.owasp</groupId>
-                        <artifactId>dependency-check-maven</artifactId>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
             <id>test</id>
             <modules>
                 <module>checks</module>
-                <module>endpoint/opcua</module>
                 <module>test</module>
             </modules>
         </profile>
@@ -445,7 +426,6 @@
             <id>coverage</id>
             <modules>
                 <module>checks</module>
-                <module>endpoint/opcua</module>
                 <module>test</module>
             </modules>
             <build>
