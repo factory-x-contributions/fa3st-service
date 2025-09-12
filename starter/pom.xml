@@ -286,6 +286,5 @@
             </plugin>
         </plugins>
     </build>
-    <profiles>
-    </profiles>
+    <profiles></profiles>
 </project>
