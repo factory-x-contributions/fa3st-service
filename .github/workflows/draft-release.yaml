@@ -90,6 +90,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Create Release or Bugfix branch
         run: git checkout -b ${{ needs.validate-and-prepare.outputs.branch_name }}
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.carlos-schmidt }}
       - name: Initialize mandatory git config
         run: |
           git config user.name "factory-x-bot"
@@ -146,7 +149,9 @@ jobs:
 
           echo "commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
       - name: Push new branch
-        run: git push origin ${{ needs.validate-and-prepare.outputs.branch_name }}
+        run: |
+          git remote set-url origin git@github.com:${{ github.repository }}.git
+          git push origin ${{ needs.validate-and-prepare.outputs.branch_name }}
       - name: Create pull request
         if: ${{ github.ref_name == 'main' }}
         uses: thomaseizinger/create-pull-request@1.4.0
