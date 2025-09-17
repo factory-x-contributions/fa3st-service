@@ -92,7 +92,7 @@ jobs:
         run: git checkout -b ${{ needs.validate-and-prepare.outputs.branch_name }}
       - uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ secrets.carlos-schmidt }}
+          ssh-private-key: ${{ secrets.DEPLOY_KEY }}
       - name: Initialize mandatory git config
         run: |
           git config user.name "factory-x-bot"
