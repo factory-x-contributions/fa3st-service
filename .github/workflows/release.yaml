@@ -75,7 +75,7 @@ jobs:
         shell: bash
         run: |
           git remote set-url origin git@github.com:${{ github.repository }}.git
-          git tag -a ${{ needs.validation.outputs.RELEASE_VERSION }} -m "Release 0.1.1-cloudevents"
+          git tag -a ${{ needs.validation.outputs.RELEASE_VERSION }} -m "Release ${{ needs.validation.outputs.RELEASE_VERSION }}"
           git push origin ${{ needs.validation.outputs.RELEASE_VERSION }}
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
