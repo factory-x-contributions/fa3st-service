@@ -36,11 +36,10 @@ on:
 
 
 jobs:
-  # Gate
   validation:
-    name: "Check if repository is not fork AND head is release OR base is bugfix"
+    name: "Check if head is release OR base is bugfix"
     runs-on: ubuntu-latest
-    if: ${{ github.repository == 'factory-x-contributions/fa3st-service' && (startsWith(github.event.pull_request.head.ref, 'release/') || startsWith(github.ref_name, 'bugfix/')) }}
+    if: ${{ (startsWith(github.event.pull_request.head.ref, 'release/') || startsWith(github.ref_name, 'bugfix/')) }}
     outputs:
       RELEASE_VERSION: ${{ steps.release-version.outputs.RELEASE_VERSION }}
     steps:
@@ -60,21 +59,22 @@ jobs:
     if: needs.validation.outputs.RELEASE_VERSION
     steps:
       - uses: actions/checkout@v4
-      - name: Prepare Git Config
-        shell: bash
-        run: |
-          # Prepare git env
-          git config user.name "factory-x-bot"
-          git config user.email "factory-x-bot@factory-x.org"
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+         ssh-private-key: ${{ secrets.DEPLOY_KEY }}
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.FX_BOT_GPG_PRIVKEY }}
+          passphrase: ${{ secrets.FX_BOT_GPG_PASSPHRASE }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+          git_tag_gpgsign: true
       - name: Create Release Tag
         id: create_release_tag
         shell: bash
         run: |
-          # informative
-          git branch -a
-          git tag
-
-          # Create & push tag
+          git remote set-url origin git@github.com:${{ github.repository }}.git
           git tag ${{ needs.validation.outputs.RELEASE_VERSION }}
           git push origin ${{ needs.validation.outputs.RELEASE_VERSION }}
       - name: Create GitHub Release
@@ -91,14 +91,3 @@ jobs:
     if: github.ref_name == 'main'
     uses: ./.github/workflows/bump-version.yaml
     secrets: inherit
-
-  # Release: Publish specs to GitHub Pages
-#  publish-openapi-to-gh-pages:
-#    name: "Publish OpenAPI UI spec GitHub Pages"
-#    permissions:
-#      contents: write
-#    needs: [ validation ]
-#    uses: ./.github/workflows/publish-openapi-ui.yml
-#    secrets: inherit
-#    with:
-#      version: ${{ needs.validation.outputs.RELEASE_VERSION }}
