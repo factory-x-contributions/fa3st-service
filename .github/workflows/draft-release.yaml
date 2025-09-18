@@ -90,19 +90,15 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - name: Setup git user
-        run: |
-          git config user.name "${{ github.actor }}"
-          email="${{ inputs.email }}"
-          if [ -z "$email" ]; then
-            email="${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
-          fi
-          git config user.email "$email"
       - name: Create Release or Bugfix branch
         run: git checkout -b ${{ needs.validate-and-prepare.outputs.branch_name }}
         #- uses: webfactory/ssh-agent@v0.9.0
         #  with:
         #    ssh-private-key: ${{ secrets.DEPLOY_KEY }}
+      - name: Set up git user
+        run: |
+          git config user.name "factory-x-bot"
+          git config user.email "factory-x-bot@factory-x.org"
       - name: Bump version in maven pom.xml files
         run: |-
           mvn versions:set -DgenerateBackupPoms=false -DnewVersion=${{ inputs.version }}
@@ -156,7 +152,7 @@ jobs:
           echo "commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
       - name: Push new branch
         run: |
-          #git remote set-url origin git@github.com:${{ github.repository }}.git
+          git remote set-url origin git@github.com:${{ github.repository }}.git
           git push origin ${{ needs.validate-and-prepare.outputs.branch_name }}
       - name: Create pull request
         if: ${{ github.ref_name == 'main' }}
