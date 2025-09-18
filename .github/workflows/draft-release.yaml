@@ -32,6 +32,9 @@ on:
       version:
         description: 'The version you want to release. Ref should be either main for latest releases or a tag for bugfixes. '
         required: true
+      committer-mail:
+        description: 'Your e-mail address for committing the pre-release changes. If blank, uses the anonymous <id>+<username>@users.noreply.github.com address'
+        required: false
 
 env:
   # One submodule cannot be built (authorization required) so we get the released version of it
@@ -54,7 +57,6 @@ jobs:
       - id: check-tag
         name: "Check if tag exists"
         run: |-
-
           tag=$(git tag -l ${{ inputs.version }})
 
           if [ ! -z $tag ];
@@ -88,6 +90,14 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
+      - name: Setup git user
+        run: |
+          git config user.name "${{ github.actor }}"
+          email="${{ inputs.email }}"
+          if [ -z "$email" ]; then
+            email="${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+          fi
+          git config user.email "$email"
       - name: Create Release or Bugfix branch
         run: git checkout -b ${{ needs.validate-and-prepare.outputs.branch_name }}
         #- uses: webfactory/ssh-agent@v0.9.0
