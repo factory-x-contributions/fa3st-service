@@ -41,8 +41,10 @@ runs:
       shell: bash
       run: |
         mvn dependency:list > dependencies-unclean
-        if grep -q "ERROR" dependencies_unclean; then exit 1;  fi
+        if grep -q "ERROR" dependencies-unclean; then exit 1;  fi
         cat dependencies-unclean | grep -o '[a-zA-Z0-9.-]\+:[a-zA-Z0-9.-]\+:jar:[0-9.]\+' | sed 's/:jar//' | sort | uniq > dependency-list
+        sed -i '/de\.fraunhofer\.iosb\.ilt\.faaast\.service/d' dependency-list
+        rm dependencies-unclean
         cat dependency-list
 
     - name: Print failure reason
