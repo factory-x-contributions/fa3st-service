@@ -69,12 +69,12 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
     }
 
 
-    public String getSecret() {
+    public String getClientSecret() {
         return secret;
     }
 
 
-    public void setSecret(String secret) {
+    public void setClientSecret(String secret) {
         this.secret = secret;
     }
 
@@ -274,8 +274,8 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
         }
 
 
-        public B secret(String value) {
-            getBuildingInstance().setSecret(value);
+        public B clientSecret(String value) {
+            getBuildingInstance().setClientSecret(value);
             return getSelf();
         }
 

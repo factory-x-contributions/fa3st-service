@@ -67,7 +67,7 @@ public class PahoClient {
             .connectTimeout(Duration.ofSeconds(10))
             .build();
     private volatile String accessToken;
-    private volatile Instant tokenExpiry = Instant.EPOCH;
+    private volatile Instant tokenExpiry;
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "PahoClient-TokenRefresher");
         t.setDaemon(true);
@@ -284,15 +284,17 @@ public class PahoClient {
 
     private synchronized void refreshAccessTokenIfNeeded(boolean force) throws Exception {
         Instant now = Instant.now();
-        // Refresh if forced or token expires within 60 seconds
-        if (!force && now.isBefore(tokenExpiry.minusSeconds(60))) {
+        boolean expiredOrMissing = accessToken == null ||
+                tokenExpiry == null ||
+                !now.isBefore(tokenExpiry);
+        if (!force && !expiredOrMissing) {
             return;
         }
         TokenResponse tr = requestClientCredentialsToken();
         this.accessToken = tr.accessToken;
         // Use a 60s safety margin
         this.tokenExpiry = now.plusSeconds(Math.max(0, tr.expiresIn - 60));
-        logger.info("Obtained new access token, expires in ~{} seconds", tr.expiresIn);
+        logger.debug("Cloudevent Publisher obtained new access token, expires in ~{} seconds", tr.expiresIn);
     }
 
 
@@ -330,7 +332,7 @@ public class PahoClient {
         StringBuilder body = new StringBuilder();
         body.append("grant_type=client_credentials");
         body.append("&client_id=").append(URLEncoder.encode(config.getClientId(), StandardCharsets.UTF_8));
-        body.append("&client_secret=").append(URLEncoder.encode(config.getSecret(), StandardCharsets.UTF_8));
+        body.append("&client_secret=").append(URLEncoder.encode(config.getClientSecret(), StandardCharsets.UTF_8));
 
         HttpRequest request = HttpRequest.newBuilder(URI.create(tokenEndpoint))
                 .timeout(Duration.ofSeconds(15))
