@@ -366,8 +366,8 @@ public class PahoClient {
         return tr;
     }
 
-    private static class TokenResponse {
-        String accessToken;
-        long expiresIn;
+    public static class TokenResponse {
+        public String accessToken;
+        public Long expiresIn;
     }
 }
