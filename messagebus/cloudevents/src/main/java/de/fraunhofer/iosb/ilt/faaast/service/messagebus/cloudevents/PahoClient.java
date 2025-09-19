@@ -14,10 +14,13 @@
  */
 package de.fraunhofer.iosb.ilt.faaast.service.messagebus.cloudevents;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import de.fraunhofer.iosb.ilt.faaast.service.config.CertificateConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.exception.MessageBusException;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -28,9 +31,7 @@ import java.security.GeneralSecurityException;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -74,6 +75,8 @@ public class PahoClient {
         return t;
     });
     private ScheduledFuture<?> refreshTask;
+    private static final ObjectMapper MAPPER = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
 
     public PahoClient(MessageBusCloudeventsConfig config) {
         this.config = config;
@@ -349,113 +352,18 @@ public class PahoClient {
     }
 
 
-    private Optional<String> firstPresent(Optional<String>... opts) {
-        if (opts == null)
-            return Optional.empty();
-        for (Optional<String> o: opts) {
-            if (o != null && o.isPresent())
-                return o;
-        }
-        return Optional.empty();
-    }
-
-
-    private Optional<String> getFromSecret(Object secret, String key) {
-        if (secret == null) {
-            return Optional.empty();
-        }
-        try {
-            if (secret instanceof Map) {
-                Object val = ((Map<?, ?>) secret).get(key);
-                return Optional.ofNullable(val == null ? null : val.toString());
-            }
-        }
-        catch (Exception ignore) {
-            // fall through to reflection
-        }
-        // Try reflection for getters like getMqttClientId(), getMqttClientSecret(), getScope(), getAudience()
-        String getter = "get" + Character.toUpperCase(key.charAt(0)) + key.substring(1);
-        try {
-            Method m = secret.getClass().getMethod(getter);
-            Object val = m.invoke(secret);
-            return Optional.ofNullable(val == null ? null : val.toString());
-        }
-        catch (Exception e) {
-            return Optional.empty();
-        }
-    }
-
-
     private TokenResponse parseTokenResponse(String body) throws IOException {
-        // Minimal JSON parsing; replace with a robust JSON library if available.
-        String at = extractJsonString(body, "access_token");
-        Long exp = extractJsonLong(body, "expires_in");
-        if (at == null || exp == null) {
-            throw new IOException("Failed to parse token response: " + body);
-        }
-        TokenResponse tr = new TokenResponse();
-        tr.accessToken = at;
-        tr.expiresIn = exp;
-        return tr;
-    }
-
-
-    private String extractJsonString(String json, String field) {
-        String needle = "\"" + field + "\"";
-        int idx = json.indexOf(needle);
-        if (idx < 0)
-            return null;
-        int colon = json.indexOf(':', idx + needle.length());
-        if (colon < 0)
-            return null;
-        int startQuote = json.indexOf('"', colon + 1);
-        if (startQuote < 0)
-            return null;
-        int i = startQuote + 1;
-        StringBuilder sb = new StringBuilder();
-        boolean escape = false;
-        while (i < json.length()) {
-            char c = json.charAt(i++);
-            if (escape) {
-                sb.append(c);
-                escape = false;
-            }
-            else if (c == '\\') {
-                escape = true;
-            }
-            else if (c == '"') {
-                break;
-            }
-            else {
-                sb.append(c);
-            }
-        }
-        return sb.toString();
-    }
-
-
-    private Long extractJsonLong(String json, String field) {
-        String needle = "\"" + field + "\"";
-        int idx = json.indexOf(needle);
-        if (idx < 0)
-            return null;
-        int colon = json.indexOf(':', idx + needle.length());
-        if (colon < 0)
-            return null;
-        int i = colon + 1;
-        while (i < json.length() && Character.isWhitespace(json.charAt(i)))
-            i++;
-        int j = i;
-        while (j < json.length() && (Character.isDigit(json.charAt(j))))
-            j++;
-        if (i == j)
-            return null;
+        final TokenResponse tr;
         try {
-            return Long.parseLong(json.substring(i, j));
+            tr = MAPPER.readValue(body, TokenResponse.class);
         }
-        catch (NumberFormatException e) {
-            return null;
+        catch (JsonProcessingException e) {
+            throw new IOException("Failed to parse token response: " + body, e);
         }
+        if (tr == null || tr.accessToken == null || Objects.isNull(tr.expiresIn)) {
+            throw new IOException("Failed to parse token response (missing fields): " + body);
+        }
+        return tr;
     }
 
     private static class TokenResponse {
