@@ -53,7 +53,7 @@ import org.slf4j.LoggerFactory;
  * Eclipse Paho MQTT client that:
  * fetches an OAuth2 access token (client credentials) from config.getIdentityProviderUrl()
  * using client credentials from config.getClientId(), getClientSecret;
- * connects over WebSocket and sends Authorization: Bearer <token> header.
+ * connects over WebSocket and sends Authorization: Bearer token header.
  * refreshes token proactively and updates headers so auto-reconnect uses a valid token.
  */
 public class PahoClient {
