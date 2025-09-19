@@ -366,6 +366,9 @@ public class PahoClient {
         return tr;
     }
 
+    /**
+     * Class for Response containing token and expiresIn as well as other stuff not being read.
+     */
     public static class TokenResponse {
         public String accessToken;
         public Long expiresIn;
