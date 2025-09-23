@@ -32,7 +32,6 @@ import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
-import java.util.Properties;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -278,10 +277,8 @@ public class PahoClient {
 
 
     private void applyAuthorizationHeader(MqttConnectOptions options, String token) {
-        Properties headers = new Properties();
-        headers.setProperty("Authorization", "Bearer " + token);
-        options.setCustomWebSocketHeaders(headers);
-        logger.debug("Applied Authorization header for WebSocket");
+        options.setPassword(token.toCharArray());
+        logger.debug("Applied token as password");
     }
 
 
