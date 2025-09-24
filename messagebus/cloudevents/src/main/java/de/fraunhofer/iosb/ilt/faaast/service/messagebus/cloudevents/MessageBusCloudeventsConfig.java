@@ -41,6 +41,8 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
     private String topicPrefix;
     private boolean slimEvents;
     private String eventCallbackAddress;
+    private String secret;
+    private String identityProviderUrl;
 
     public MessageBusCloudeventsConfig() {
         this.host = DEFAULT_HOST;
@@ -64,6 +66,26 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
 
     public void setClientId(String clientId) {
         this.clientId = clientId;
+    }
+
+
+    public String getClientSecret() {
+        return secret;
+    }
+
+
+    public void setClientSecret(String secret) {
+        this.secret = secret;
+    }
+
+
+    public String getIdentityProviderUrl() {
+        return identityProviderUrl;
+    }
+
+
+    public void setIdentityProviderUrl(String identityProviderUrl) {
+        this.identityProviderUrl = identityProviderUrl;
     }
 
 
@@ -242,6 +264,18 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
 
         public B slimEvents(boolean value) {
             getBuildingInstance().setSlimEvents(value);
+            return getSelf();
+        }
+
+
+        public B identityProviderUrl(String value) {
+            getBuildingInstance().setIdentityProviderUrl(value);
+            return getSelf();
+        }
+
+
+        public B clientSecret(String value) {
+            getBuildingInstance().setClientSecret(value);
             return getSelf();
         }
 
