@@ -120,7 +120,9 @@ public class RequestHandlerServlet extends HttpServlet {
     }
 
 
-    private void executeAndSend(HttpServletResponse response, de.fraunhofer.iosb.ilt.faaast.service.model.api.Request<? extends Response> apiRequest) throws Exception {
+    private void executeAndSend(HttpServletResponse response,
+                                de.fraunhofer.iosb.ilt.faaast.service.model.api.Request<? extends Response> apiRequest)
+            throws Exception {
         if (Objects.isNull(apiRequest)) {
             throw new InvalidRequestException("empty API request");
         }

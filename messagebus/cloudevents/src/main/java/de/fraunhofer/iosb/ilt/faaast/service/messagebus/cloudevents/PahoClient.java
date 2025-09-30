@@ -110,12 +110,15 @@ public class PahoClient {
         connectOptions.setAutomaticReconnect(true);
         connectOptions.setCleanSession(false);
 
-        try {
-            refreshAccessTokenIfNeeded(true);
-            applyAuthorizationHeader(connectOptions, accessToken);
-        }
-        catch (Exception e) {
-            throw new MessageBusException("Failed to obtain OAuth token from Identity Provider", e);
+        if (!Objects.isNull(config.getIdentityProviderUrl())) {
+            try {
+                refreshAccessTokenIfNeeded(true);
+                applyAuthorizationHeader(connectOptions, accessToken);
+                config.setUser("");
+            }
+            catch (Exception e) {
+                throw new MessageBusException("Failed to obtain OAuth token from Identity Provider", e);
+            }
         }
 
         try {
@@ -127,12 +130,13 @@ public class PahoClient {
                 @Override
                 public void connectionLost(Throwable throwable) {
                     logger.warn("Cloudevents MQTT message bus connection lost", throwable);
-                    try {
-                        refreshAccessTokenIfNeeded(false);
-                        applyAuthorizationHeader(connectOptions, accessToken);
-                    }
-                    catch (Exception e) {
-                        logger.warn("Failed to refresh token on connectionLost", e);
+                    if (!Objects.isNull(config.getIdentityProviderUrl())) {
+                        try {
+                            refreshAccessTokenIfNeeded(false);
+                            applyAuthorizationHeader(connectOptions, accessToken);
+                        } catch (Exception e) {
+                            logger.warn("Failed to refresh token on connectionLost", e);
+                        }
                     }
                 }
 
@@ -152,8 +156,9 @@ public class PahoClient {
                 @Override
                 public void connectComplete(boolean reconnect, String serverURI) {
                     logger.debug("Cloudevents MQTT MessageBus Client connected to broker. reconnect={}", reconnect);
-                    // Keep token fresh for future reconnect attempts
-                    scheduleProactiveRefresh();
+                    if (!Objects.isNull(config.getIdentityProviderUrl())) {
+                        scheduleProactiveRefresh();
+                    }
                 }
             });
 
