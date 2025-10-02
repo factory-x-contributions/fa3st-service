@@ -134,7 +134,8 @@ public class PahoClient {
                         try {
                             refreshAccessTokenIfNeeded(false);
                             applyAuthorizationHeader(connectOptions, accessToken);
-                        } catch (Exception e) {
+                        }
+                        catch (Exception e) {
                             logger.warn("Failed to refresh token on connectionLost", e);
                         }
                     }

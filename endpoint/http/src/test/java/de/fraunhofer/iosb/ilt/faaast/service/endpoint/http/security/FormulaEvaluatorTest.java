@@ -187,9 +187,10 @@ public class FormulaEvaluatorTest {
         assertTrue(FormulaEvaluator.evaluate(formula, ctx));
     }
 
+
     @Test
     public void testFormula_ConditionsNotMet() throws JsonProcessingException {
-        String json= """
+        String json = """
                 {
                                     "$and": [
                                         {
