@@ -76,7 +76,7 @@ public class ApiGateway {
 
     /**
      * Checks if the user is authorized to receive the response of the request.
-     * 
+     *
      * @param request the HttpRequest
      * @return true if authorized and ACL exists
      */
@@ -95,7 +95,7 @@ public class ApiGateway {
 
     /**
      * Filters out AAS that the user is not authorized for.
-     * 
+     *
      * @param request the HttpRequest
      * @param response the ApiResponse
      * @return the ApiResponse with only allowed AAS
@@ -115,7 +115,7 @@ public class ApiGateway {
 
     /**
      * Filters out Submodels that the user is not authorized for.
-     * 
+     *
      * @param request the HttpRequest
      * @param response the ApiResponse
      * @return the ApiResponse with only allowed Submodels
