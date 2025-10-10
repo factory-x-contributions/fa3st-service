@@ -74,6 +74,12 @@ public class ApiGateway {
     }
 
 
+    /**
+     * Checks if the user is authorized to receive the response of the request.
+     * 
+     * @param request the HttpRequest
+     * @return true if authorized and ACL exists
+     */
     public boolean isAuthorized(HttpServletRequest request) {
         String token = request.getHeader("Authorization");
         if (java.util.Objects.isNull(token)) {
@@ -87,20 +93,13 @@ public class ApiGateway {
     }
 
 
-    protected DecodedJWT extractAndDecodeJwt(HttpServletRequest request) {
-        var authHeaderValue = request.getHeader("Authorization");
-
-        if (authHeaderValue == null || !authHeaderValue.startsWith(BEARER_KWD.concat(" "))) {
-            return null;
-        }
-
-        // Remove "Bearer "
-        String token = authHeaderValue.substring(BEARER_KWD.length()).trim();
-
-        return JWT.decode(token);
-    }
-
-
+    /**
+     * Filters out AAS that the user is not authorized for.
+     * 
+     * @param request the HttpRequest
+     * @param response the ApiResponse
+     * @return the ApiResponse with only allowed AAS
+     */
     public Response filterAas(HttpServletRequest request, GetAllAssetAdministrationShellsResponse response) {
         String token = request.getHeader("Authorization");
         if (java.util.Objects.isNull(token)) {
@@ -114,6 +113,13 @@ public class ApiGateway {
     }
 
 
+    /**
+     * Filters out Submodels that the user is not authorized for.
+     * 
+     * @param request the HttpRequest
+     * @param response the ApiResponse
+     * @return the ApiResponse with only allowed Submodels
+     */
     public Response filterSubmodels(HttpServletRequest request, GetAllSubmodelsResponse response) {
         String token = request.getHeader("Authorization");
         if (java.util.Objects.isNull(token)) {
