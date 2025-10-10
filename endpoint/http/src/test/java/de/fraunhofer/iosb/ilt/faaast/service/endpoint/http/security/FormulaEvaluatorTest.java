@@ -257,7 +257,7 @@ public class FormulaEvaluatorTest {
         Map<String, Object> ctx = new HashMap<>();
         ctx.put("CLAIM:organization", "Company2");
         //ctx.put("CLAIM:email", "user2@company2.com");
-        assertTrue(FormulaEvaluator.evaluate(formula, ctx));
+        assertFalse(FormulaEvaluator.evaluate(formula, ctx));
     }
 
 }
