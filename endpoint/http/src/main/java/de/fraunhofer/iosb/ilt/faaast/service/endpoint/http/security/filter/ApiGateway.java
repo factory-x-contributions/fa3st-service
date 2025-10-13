@@ -101,34 +101,45 @@ public class ApiGateway {
      * @return the ApiResponse with only allowed AAS
      */
     public Response filterAas(HttpServletRequest request, GetAllAssetAdministrationShellsResponse response) {
-        String token = request.getHeader("Authorization");
-        if (java.util.Objects.isNull(token)) {
-            return AuthServer.filterRulesAas(this.aclList, null, request, response);
-        }
-        else {
-            token = token.startsWith("Bearer ") ? token.substring("Bearer ".length()).trim() : token;
-            DecodedJWT jwt = JWT.decode(token);
-            return AuthServer.filterRulesAas(this.aclList, jwt.getClaims(), request, response);
-        }
+        response.getPayload().getContent()
+                .removeIf(aas -> aclList.values().stream()
+                        .noneMatch(a -> a.getAllAccessPermissionRules().getRules().stream()
+                                .anyMatch(r -> AuthServer.evaluateRule(r, "/shells/" + EncodingHelper.base64Encode(aas.getId()),
+                                        request.getMethod(), extractClaims(request), a.getAllAccessPermissionRules()))));
+        return response;
     }
 
 
     /**
      * Filters out Submodels that the user is not authorized for.
-     *
+     * f
+     * 
      * @param request the HttpRequest
      * @param response the ApiResponse
      * @return the ApiResponse with only allowed Submodels
      */
     public Response filterSubmodels(HttpServletRequest request, GetAllSubmodelsResponse response) {
+        response.getPayload().getContent()
+                .removeIf(submodel -> aclList.values().stream().noneMatch(
+                        a -> a.getAllAccessPermissionRules().getRules().stream()
+                                .anyMatch(r -> AuthServer.evaluateRule(r, "/submodels/" + EncodingHelper.base64Encode(submodel.getId()),
+                                        request.getMethod(), extractClaims(request), a.getAllAccessPermissionRules()))));
+        return response;
+    }
+
+
+    private java.util.Map<String, Claim> extractClaims(HttpServletRequest request) {
         String token = request.getHeader("Authorization");
-        if (java.util.Objects.isNull(token)) {
-            return AuthServer.filterRulesSubmodels(this.aclList, null, request, response);
+        if (token == null) {
+            return null;
         }
-        else {
-            token = token.startsWith("Bearer ") ? token.substring("Bearer ".length()).trim() : token;
-            DecodedJWT jwt = JWT.decode(token);
-            return AuthServer.filterRulesSubmodels(this.aclList, jwt.getClaims(), request, response);
+        token = token.startsWith("Bearer ") ? token.substring("Bearer ".length()).trim() : token;
+        try {
+            com.auth0.jwt.interfaces.DecodedJWT jwt = com.auth0.jwt.JWT.decode(token);
+            return jwt.getClaims();
+        }
+        catch (com.auth0.jwt.exceptions.JWTDecodeException e) {
+            return null;
         }
     }
 
@@ -158,27 +169,6 @@ public class ApiGateway {
                             .anyMatch(r -> evaluateRule(r, path, method, claims, a.getAllAccessPermissionRules())))
                     .collect(Collectors.toList());
             return !relevantRules.isEmpty();
-        }
-
-
-        private static Response filterRulesAas(Map<Path, AllAccessPermissionRulesRoot> aclList, Map<String, Claim> claims, HttpServletRequest request,
-                                               GetAllAssetAdministrationShellsResponse response) {
-            String method = request.getMethod();
-            response.getPayload().getContent()
-                    .removeIf(aas -> aclList.values().stream()
-                            .noneMatch(a -> a.getAllAccessPermissionRules().getRules().stream().anyMatch(r -> evaluateRule(r, "/shells/" + EncodingHelper.base64Encode(aas.getId()),
-                                    method, claims, a.getAllAccessPermissionRules()))));
-            return response;
-        }
-
-
-        private static Response filterRulesSubmodels(Map<Path, AllAccessPermissionRulesRoot> aclList, Map<String, Claim> claims, HttpServletRequest request,
-                                                     GetAllSubmodelsResponse response) {
-            response.getPayload().getContent()
-                    .removeIf(submodel -> aclList.values().stream().noneMatch(
-                            a -> a.getAllAccessPermissionRules().getRules().stream().anyMatch(r -> evaluateRule(r, "/submodels/" + EncodingHelper.base64Encode(submodel.getId()),
-                                    request.getMethod(), claims, a.getAllAccessPermissionRules()))));
-            return response;
         }
 
 
