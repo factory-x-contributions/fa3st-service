@@ -112,8 +112,7 @@ public class ApiGateway {
 
     /**
      * Filters out Submodels that the user is not authorized for.
-     * f
-     * 
+     *
      * @param request the HttpRequest
      * @param response the ApiResponse
      * @return the ApiResponse with only allowed Submodels
