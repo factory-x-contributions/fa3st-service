@@ -7,7 +7,6 @@
         <version>0.1.0-cloudevents</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
-    <groupId>de.fraunhofer.iosb.ilt.faaast.service</groupId>
     <artifactId>endpoint-http</artifactId>
     <name>endpoint-http</name>
     <description>HTTP endpoint implementation of the FA³ST Service.</description>

@@ -133,6 +133,10 @@ public class RequestHandlerServlet extends HttpServlet {
             throw new InvalidRequestException("empty API request");
         }
         checkRequestSupportedByProfiles(apiRequest);
+        if (!apiGateway.isAuthorized(request)) {
+            doThrow(new UnauthorizedException(
+                    String.format("User not authorized '%s'", request.getRequestURI())));
+        }
         de.fraunhofer.iosb.ilt.faaast.service.model.api.Response apiResponse = serviceContext.execute(endpoint, apiRequest);
         if (Objects.isNull(apiResponse)) {
             throw new ServletException("empty API response");
@@ -146,12 +150,6 @@ public class RequestHandlerServlet extends HttpServlet {
             else if ((url.equals("/submodels/") || url.equals("/submodels")) && request.getMethod().equals("GET")) {
                 GetAllSubmodelsResponse submodelsResponse = (GetAllSubmodelsResponse) apiResponse;
                 apiResponse = apiGateway.filterSubmodels(request, submodelsResponse);
-            }
-            else {
-                if (!apiGateway.isAuthorized(request)) {
-                    doThrow(new UnauthorizedException(
-                            String.format("User not authorized '%s'", request.getRequestURI())));
-                }
             }
         }
         if (isSuccessful(apiResponse)) {

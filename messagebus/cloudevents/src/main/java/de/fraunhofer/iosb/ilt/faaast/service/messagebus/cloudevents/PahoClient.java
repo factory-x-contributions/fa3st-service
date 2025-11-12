@@ -164,7 +164,9 @@ public class PahoClient {
             });
 
             logger.trace("connecting to Cloudevents MQTT broker: {}", config.getHost());
-            mqttClient.connect(connectOptions);
+            if (!Objects.isNull(config.getHost())) {
+                mqttClient.connect(connectOptions);
+            }
             logger.debug("connected to Cloudevents MQTT broker: {}", config.getHost());
         }
         catch (MqttException e) {
