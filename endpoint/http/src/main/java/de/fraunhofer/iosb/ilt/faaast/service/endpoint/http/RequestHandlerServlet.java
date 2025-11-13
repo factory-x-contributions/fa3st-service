@@ -133,9 +133,11 @@ public class RequestHandlerServlet extends HttpServlet {
             throw new InvalidRequestException("empty API request");
         }
         checkRequestSupportedByProfiles(apiRequest);
-        if (!apiGateway.isAuthorized(request)) {
-            doThrow(new UnauthorizedException(
-                    String.format("User not authorized '%s'", request.getRequestURI())));
+        if (Objects.nonNull(apiGateway)) {
+            if (!apiGateway.isAuthorized(request)) {
+                doThrow(new UnauthorizedException(
+                        String.format("User not authorized '%s'", request.getRequestURI())));
+            }
         }
         de.fraunhofer.iosb.ilt.faaast.service.model.api.Response apiResponse = serviceContext.execute(endpoint, apiRequest);
         if (Objects.isNull(apiResponse)) {
