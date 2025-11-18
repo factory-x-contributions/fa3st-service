@@ -147,13 +147,15 @@ public class RequestHandlerServlet extends HttpServlet {
             if (!apiGateway.isAuthorized(request)) {
                 doThrow(new UnauthorizedException(
                         String.format("User not authorized '%s'", request.getRequestURI())));
-            } else {
+            }
+            else {
                 apiResponse = serviceContext.execute(endpoint, apiRequest);
             }
-        } else {
+        }
+        else {
             apiResponse = serviceContext.execute(endpoint, apiRequest);
         }
-         if (Objects.isNull(apiResponse)) {
+        if (Objects.isNull(apiResponse)) {
             throw new ServletException("empty API response");
         }
         if (isSuccessful(apiResponse)) {
