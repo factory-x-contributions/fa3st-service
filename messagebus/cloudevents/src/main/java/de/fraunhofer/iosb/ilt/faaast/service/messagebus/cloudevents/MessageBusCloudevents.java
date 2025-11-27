@@ -205,15 +205,12 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
             JsonProcessingException {
         if (message instanceof ChangeEventMessage changeEventMessage) {
             return appendChange(builder, changeEventMessage);
-
         }
         else if (message instanceof AccessEventMessage accessEventMessage) {
             return appendAccess(builder, accessEventMessage);
-
         }
         else if (message instanceof ErrorEventMessage errorEventMessage) {
             return appendError(builder, errorEventMessage);
-
         }
         throw new IllegalArgumentException(String.format("EventType unknown: %s", message.getClass().getSimpleName()));
     }
