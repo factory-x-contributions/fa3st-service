@@ -48,6 +48,7 @@ import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.event.change.Eleme
 import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.event.change.ValueChangeEventMessage;
 import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.event.error.ErrorEventMessage;
 import de.fraunhofer.iosb.ilt.faaast.service.util.Ensure;
+import de.fraunhofer.iosb.ilt.faaast.service.util.ReferenceHelper;
 import io.cloudevents.CloudEvent;
 import io.cloudevents.core.builder.CloudEventBuilder;
 import io.cloudevents.jackson.JsonFormat;
@@ -63,6 +64,7 @@ import java.util.Base64;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.eclipse.digitaltwin.aas4j.v3.model.HasSemantics;
@@ -191,18 +193,33 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
             return cloudEventBuilder;
         }
 
-        if (element instanceof HasSemantics semanticElement &&
-                null != semanticElement.getSemanticId() &&
-                !semanticElement.getSemanticId().getKeys().isEmpty()) {
+        Optional<String> maybeSemanticId = getSemanticIdFirstKeyValue(element);
+        if (maybeSemanticId.isPresent()) {
             cloudEventBuilder = cloudEventBuilder
-                    .withExtension("semanticid", semanticElement.getSemanticId().getKeys().get(0).getValue());
+                    .withExtension("semanticid", maybeSemanticId.get());
         }
+
         return cloudEventBuilder;
     }
 
 
-    private CloudEventBuilder appendEventTypeSpecific(CloudEventBuilder builder, EventMessage message) throws SerializationException,
-            JsonProcessingException {
+    private Optional<String> getSemanticIdFirstKeyValue(Referable referable) {
+
+        if (!(referable instanceof HasSemantics semanticElement)) {
+            return Optional.empty();
+
+        }
+        Key semanticId = ReferenceHelper.getRoot(semanticElement.getSemanticId());
+
+        if (semanticId == null) {
+            return Optional.empty();
+        }
+
+        return Optional.ofNullable(semanticId.getValue());
+    }
+
+
+    private CloudEventBuilder appendEventTypeSpecific(CloudEventBuilder builder, EventMessage message) throws JsonProcessingException {
         if (message instanceof ChangeEventMessage changeEventMessage) {
             return appendChange(builder, changeEventMessage);
         }
@@ -216,81 +233,72 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
     }
 
 
-    private CloudEventBuilder appendError(CloudEventBuilder builder, ErrorEventMessage errorEventMessage) throws SerializationException {
+    private CloudEventBuilder appendError(CloudEventBuilder builder, ErrorEventMessage errorEventMessage) throws JsonProcessingException {
         String typeBuilder = config.getEventTypePrefix() + getSpecificElementName(errorEventMessage.getElement()) +
-                "Error";
+                "error";
 
-        return builder.withType(typeBuilder)
-                .withData(serializer.write(errorEventMessage).getBytes(StandardCharsets.UTF_8));
+        builder = withData(builder, errorEventMessage);
+
+        return builder.withType(typeBuilder);
     }
 
 
     private CloudEventBuilder appendAccess(CloudEventBuilder builder, AccessEventMessage accessEventMessage) throws JsonProcessingException {
         StringBuilder typeBuilder = new StringBuilder(config.getEventTypePrefix());
 
-        typeBuilder.append(getSpecificElementName(accessEventMessage.getElement()));
-
-        byte[] data = null;
-
         if (accessEventMessage instanceof ElementReadEventMessage) {
-            typeBuilder.append("Read");
+            typeBuilder.append("read");
         }
         else if (accessEventMessage instanceof ValueReadEventMessage) {
-            typeBuilder.append("ValueRead");
+            typeBuilder.append("valueRead");
         }
         else if (accessEventMessage instanceof OperationInvokeEventMessage) {
-            data = objectMapper.writeValueAsBytes(accessEventMessage);
-            typeBuilder.append("Invoked");
+            builder = withData(builder, accessEventMessage);
+            typeBuilder.append("invoked");
         }
         else if (accessEventMessage instanceof OperationFinishEventMessage) {
-            data = objectMapper.writeValueAsBytes(accessEventMessage);
-            typeBuilder.append("Finished");
+            builder = withData(builder, accessEventMessage);
+            typeBuilder.append("finished");
         }
         else {
             throw new IllegalArgumentException(String.format("AccessEventMessage type not recognized: %s",
                     accessEventMessage.getClass().getSimpleName()));
         }
 
-        if (accessEventMessage instanceof ReadEventMessage<?> readEventMessage) {
-            data = objectMapper.writeValueAsBytes(readEventMessage.getValue());
+        if (accessEventMessage instanceof ReadEventMessage<?>) {
+            builder = withData(builder, accessEventMessage);
         }
 
-        return builder.withType(typeBuilder.toString())
-                .withData(data);
+        return builder.withType(typeBuilder.toString());
     }
 
 
-    private CloudEventBuilder appendChange(CloudEventBuilder builder, ChangeEventMessage changeEventMessage) throws JsonProcessingException,
-            SerializationException {
+    private CloudEventBuilder appendChange(CloudEventBuilder builder, ChangeEventMessage changeEventMessage) throws JsonProcessingException {
         StringBuilder typeBuilder = new StringBuilder(config.getEventTypePrefix());
 
-        typeBuilder.append(getSpecificElementName(changeEventMessage.getElement()));
-
-        byte[] data = null;
         if (changeEventMessage instanceof ValueChangeEventMessage) {
-            data = serializer.write(changeEventMessage).getBytes(StandardCharsets.UTF_8);
-            typeBuilder.append("ValueChanged");
+            builder = withData(builder, changeEventMessage);
+            typeBuilder.append("valueChanged");
         }
         else if (changeEventMessage instanceof ElementCreateEventMessage) {
-            typeBuilder.append("Created");
+            typeBuilder.append("created");
         }
         else if (changeEventMessage instanceof ElementUpdateEventMessage) {
-            typeBuilder.append("Changed");
+            typeBuilder.append("changed");
         }
         else if (changeEventMessage instanceof ElementDeleteEventMessage) {
-            typeBuilder.append("Deleted");
+            typeBuilder.append("deleted");
         }
         else {
             throw new IllegalArgumentException(String.format("ChangeEventMessage type not recognized: %s",
                     changeEventMessage.getClass().getSimpleName()));
         }
 
-        if (changeEventMessage instanceof ElementChangeEventMessage elementChangeEventMessage) {
-            data = objectMapper.writeValueAsBytes(elementChangeEventMessage.getValue());
+        if (changeEventMessage instanceof ElementChangeEventMessage) {
+            builder = withData(builder, changeEventMessage);
         }
 
-        return builder.withType(typeBuilder.toString())
-                .withData(data);
+        return builder.withType(typeBuilder.toString());
     }
 
 
@@ -313,13 +321,32 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
             elementNameBuilder.append(elementNamePart.substring(1).toLowerCase());
         }
 
-        String elementName = elementNameBuilder.toString();
+        return elementNameBuilder.toString();
+    }
 
-        if (elementKeyType.equals(ASSET_ADMINISTRATION_SHELL)) {
-            elementName = "AAS";
+
+    private CloudEventBuilder withData(CloudEventBuilder builder, EventMessage eventMessage) throws JsonProcessingException {
+        if (config.isSlimEvents()) {
+            return builder;
         }
 
-        return elementName;
+        if (eventMessage instanceof ElementChangeEventMessage messageWithReferable) {
+            return builder.withData(objectMapper.writeValueAsBytes(messageWithReferable.getValue()));
+        }
+
+        if (eventMessage instanceof ValueChangeEventMessage valueChangeEventMessage) {
+            return builder.withData(valueChangeEventMessage.getNewValue().toString().getBytes(StandardCharsets.UTF_8));
+        }
+
+        if (eventMessage instanceof ErrorEventMessage errorEventMessage) {
+            return builder.withData(errorEventMessage.getMessage().getBytes(StandardCharsets.UTF_8));
+        }
+
+        if (eventMessage instanceof ReadEventMessage<?> readEventMessage) {
+            return builder.withData(objectMapper.writeValueAsBytes(readEventMessage.getValue()));
+        }
+
+        return builder;
     }
 
 
