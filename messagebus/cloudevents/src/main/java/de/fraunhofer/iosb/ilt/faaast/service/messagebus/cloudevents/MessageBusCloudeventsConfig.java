@@ -32,6 +32,9 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
     private static final String DEFAULT_TOPIC_PREFIX = "noauth";
     private static final boolean DEFAULT_SLIM_EVENTS = true;
     private static final String DEFAULT_EVENT_CALLBACK_ADDRESS = "https://localhost";
+    private static final String DEFAULT_EVENT_TYPE_PREFIX = "io.admin-shell.events.v1.";
+    private static final String DEFAULT_DATA_SCHEMA_PREFIX = "https://api.swaggerhub.com/domains/Plattform_i40/Part1-MetaModel-Schemas/V3.1" +
+            ".0#/components/schemas/";
 
     private String clientId;
     private CertificateConfig clientCertificate;
@@ -41,6 +44,8 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
     private String topicPrefix;
     private boolean slimEvents;
     private String eventCallbackAddress;
+    private String eventTypePrefix;
+    private String dataSchemaPrefix;
     private String secret;
     private String identityProviderUrl;
 
@@ -56,6 +61,8 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
         this.password = "password";
         this.slimEvents = DEFAULT_SLIM_EVENTS;
         this.eventCallbackAddress = DEFAULT_EVENT_CALLBACK_ADDRESS;
+        this.eventTypePrefix = DEFAULT_EVENT_TYPE_PREFIX;
+        this.dataSchemaPrefix = DEFAULT_DATA_SCHEMA_PREFIX;
     }
 
 
@@ -159,6 +166,26 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
     }
 
 
+    public String getEventTypePrefix() {
+        return eventTypePrefix;
+    }
+
+
+    public void setEventTypePrefix(String eventTypePrefix) {
+        this.eventTypePrefix = eventTypePrefix;
+    }
+
+
+    public String getDataSchemaPrefix() {
+        return dataSchemaPrefix;
+    }
+
+
+    public void setDataSchemaPrefix(String dataSchemaPrefix) {
+        this.dataSchemaPrefix = dataSchemaPrefix;
+    }
+
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -174,7 +201,9 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
                 && Objects.equals(clientId, other.clientId)
                 && Objects.equals(topicPrefix, other.topicPrefix)
                 && Objects.equals(slimEvents, other.slimEvents)
-                && Objects.equals(eventCallbackAddress, other.eventCallbackAddress);
+                && Objects.equals(eventCallbackAddress, other.eventCallbackAddress)
+                && Objects.equals(eventTypePrefix, other.eventTypePrefix)
+                && Objects.equals(dataSchemaPrefix, other.dataSchemaPrefix);
     }
 
 
@@ -187,7 +216,9 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
                 clientId,
                 topicPrefix,
                 slimEvents,
-                eventCallbackAddress);
+                eventCallbackAddress,
+                eventTypePrefix,
+                dataSchemaPrefix);
     }
 
 
@@ -222,6 +253,8 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
             getBuildingInstance().setTopicPrefix(base.getTopicPrefix());
             getBuildingInstance().setSlimEvents(base.isSlimEvents());
             getBuildingInstance().setEventCallbackAddress(base.getEventCallbackAddress());
+            getBuildingInstance().setEventTypePrefix(base.getEventTypePrefix());
+            getBuildingInstance().setDataSchemaPrefix(base.getDataSchemaPrefix());
             return getSelf();
         }
 
@@ -282,6 +315,18 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
 
         public B eventCallbackAddress(String value) {
             getBuildingInstance().setEventCallbackAddress(value);
+            return getSelf();
+        }
+
+
+        public B eventTypePrefix(String value) {
+            getBuildingInstance().setEventTypePrefix(value);
+            return getSelf();
+        }
+
+
+        public B dataSchemaPrefix(String value) {
+            getBuildingInstance().setDataSchemaPrefix(value);
             return getSelf();
         }
 
