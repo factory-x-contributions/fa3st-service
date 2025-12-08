@@ -62,6 +62,8 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     private String subprotocolBody;
     private String subprotocolBodyEncoding;
     private String callbackAddress;
+    private String jwkProvider;
+    private String aclFolder;
 
     public HttpEndpointConfig() {
         certificate = CertificateConfig.builder()
@@ -255,6 +257,26 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     }
 
 
+    public String getJwkProvider() {
+        return jwkProvider;
+    }
+
+
+    public void setJwkProvider(String jwkProvider) {
+        this.jwkProvider = jwkProvider;
+    }
+
+
+    public String getAclFolder() {
+        return aclFolder;
+    }
+
+
+    public void setAclFolder(String aclFolder) {
+        this.aclFolder = aclFolder;
+    }
+
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -282,6 +304,10 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
                 && Objects.equals(subprotocol, that.subprotocol)
                 && Objects.equals(subprotocolBody, that.subprotocolBody)
                 && Objects.equals(subprotocolBodyEncoding, that.subprotocolBodyEncoding)
+                && Objects.equals(certificate, that.certificate)
+                && Objects.equals(hostname, that.hostname)
+                && Objects.equals(jwkProvider, that.jwkProvider)
+                && Objects.equals(aclFolder, that.aclFolder)
                 && Objects.equals(profiles, that.profiles);
     }
 
@@ -307,6 +333,8 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
                 subprotocol,
                 subprotocolBody,
                 subprotocolBodyEncoding,
+                jwkProvider,
+                aclFolder,
                 profiles);
     }
 
@@ -380,6 +408,11 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
 
         public B callbackAddress(String callbackAddress) {
             getBuildingInstance().setCallbackAddress(callbackAddress);
+        }
+
+
+        public B jwkProvider(String value) {
+            getBuildingInstance().setJwkProvider(value);
             return getSelf();
         }
 
@@ -440,6 +473,11 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
 
         public B subprotocolBodyEncoding(String subprotocolBodyEncoding) {
             getBuildingInstance().setSubprotocolBodyEncoding(subprotocolBodyEncoding);
+        }
+
+
+        public B aclFolder(String value) {
+            getBuildingInstance().setAclFolder(value);
             return getSelf();
         }
     }
