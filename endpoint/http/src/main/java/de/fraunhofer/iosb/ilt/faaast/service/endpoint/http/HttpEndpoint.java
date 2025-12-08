@@ -226,7 +226,7 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
         if (config.getProfiles().stream()
                 .flatMap(x -> x.getInterfaces().stream())
                 .anyMatch(x -> Objects.equals(x, Interface.AAS))) {
-            result.add(endpointFor("AAS-3.0", "/shells/" + EncodingHelper.base64UrlEncode(aasId)));
+            result.add(endpointFor("AAS-3.0", "/shells/", EncodingHelper.base64UrlEncode(aasId)));
         }
         return result;
     }
@@ -246,7 +246,7 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
         if (config.getProfiles().stream()
                 .flatMap(x -> x.getInterfaces().stream())
                 .anyMatch(x -> Objects.equals(x, Interface.SUBMODEL))) {
-            result.add(endpointFor("SUBMODEL-3.0", "/submodels/" + EncodingHelper.base64UrlEncode(submodelId)));
+            result.add(endpointFor("SUBMODEL-3.0", "/submodels/", EncodingHelper.base64UrlEncode(submodelId)));
         }
 
         return result;
@@ -254,12 +254,22 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
 
 
     private org.eclipse.digitaltwin.aas4j.v3.model.Endpoint endpointFor(String interfaceName, String path) {
+        return endpointFor(interfaceName, path, null);
+    }
+
+
+    private org.eclipse.digitaltwin.aas4j.v3.model.Endpoint endpointFor(String interfaceName, String path, String identifiableId) {
+        String safePath = Objects.isNull(identifiableId) ? path : path.concat(identifiableId);
+
         return new DefaultEndpoint.Builder()
                 ._interface(interfaceName)
                 .protocolInformation(new DefaultProtocolInformation.Builder()
-                        .href(getEndpointUri().resolve(getVersionPrefix() + path).toASCIIString())
+                        .href(getEndpointUri().resolve(safePath).toASCIIString())
                         .endpointProtocol(ENDPOINT_PROTOCOL)
                         .endpointProtocolVersion(ENDPOINT_PROTOCOL_VERSION)
+                        .subprotocol(config.getSubprotocol())
+                        .subprotocolBody(render(config.getSubprotocolBody(), identifiableId))
+                        .subprotocolBodyEncoding(config.getSubprotocolBodyEncoding())
                         .securityAttributes(new DefaultSecurityAttributeObject.Builder()
                                 .type(SecurityTypeEnum.NONE)
                                 .key("")
@@ -267,6 +277,14 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
                                 .build())
                         .build())
                 .build();
+    }
+
+
+    private String render(String subprotocolBodyTemplate, String identifiableId) {
+        if (subprotocolBodyTemplate == null) {
+            return null;
+        }
+        return subprotocolBodyTemplate.replace("{}", identifiableId == null ? "" : identifiableId);
     }
 
 

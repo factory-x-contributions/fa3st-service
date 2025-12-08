@@ -36,6 +36,9 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     public static final int DEFAULT_PORT = 443;
     public static final boolean DEFAULT_SNI_ENABLED = true;
     public static final boolean DEFAULT_SSL_ENABLED = true;
+    public static final String DEFAULT_SUBPROTOCOL = null;
+    public static final String DEFAULT_SUBPROTOCOL_BODY = null;
+    public static final String DEFAULT_SUBPROTOCOL_BODY_ENCODING = null;
 
     public static Builder builder() {
         return new Builder();
@@ -54,6 +57,10 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     private int port;
     private boolean sniEnabled;
     private boolean sslEnabled;
+    private String subprotocol;
+    private String subprotocolBody;
+    private String subprotocolBodyEncoding;
+
 
     public HttpEndpointConfig() {
         certificate = CertificateConfig.builder()
@@ -70,6 +77,9 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
         port = DEFAULT_PORT;
         sniEnabled = DEFAULT_SNI_ENABLED;
         sslEnabled = DEFAULT_SSL_ENABLED;
+        subprotocol = DEFAULT_SUBPROTOCOL;
+        subprotocolBody = DEFAULT_SUBPROTOCOL_BODY;
+        subprotocolBodyEncoding = DEFAULT_SUBPROTOCOL_BODY_ENCODING;
     }
 
 
@@ -203,6 +213,36 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     }
 
 
+    public String getSubprotocol() {
+        return subprotocol;
+    }
+
+
+    public void setSubprotocol(String subprotocol) {
+        this.subprotocol = subprotocol;
+    }
+
+
+    public String getSubprotocolBody() {
+        return subprotocolBody;
+    }
+
+
+    public void setSubprotocolBody(String subprotocolBody) {
+        this.subprotocolBody = subprotocolBody;
+    }
+
+
+    public String getSubprotocolBodyEncoding() {
+        return subprotocolBodyEncoding;
+    }
+
+
+    public void setSubprotocolBodyEncoding(String subprotocolBodyEncoding) {
+        this.subprotocolBodyEncoding = subprotocolBodyEncoding;
+    }
+
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -226,6 +266,9 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
                 && Objects.equals(port, that.port)
                 && Objects.equals(sniEnabled, that.sniEnabled)
                 && Objects.equals(sslEnabled, that.sslEnabled)
+                && Objects.equals(subprotocol, that.subprotocol)
+                && Objects.equals(subprotocolBody, that.subprotocolBody)
+                && Objects.equals(subprotocolBodyEncoding, that.subprotocolBodyEncoding)
                 && Objects.equals(profiles, that.profiles);
     }
 
@@ -247,6 +290,9 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
                 port,
                 sniEnabled,
                 sslEnabled,
+                subprotocol,
+                subprotocolBody,
+                subprotocolBodyEncoding,
                 profiles);
     }
 
@@ -356,6 +402,24 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
 
         public B ssl(boolean value) {
             getBuildingInstance().setSslEnabled(value);
+            return getSelf();
+        }
+
+
+        public B subprotocol(String subprotocol) {
+            getBuildingInstance().setSubprotocol(subprotocol);
+            return getSelf();
+        }
+
+
+        public B subprotocolBody(String subprotocolBody) {
+            getBuildingInstance().setSubprotocolBody(subprotocolBody);
+            return getSelf();
+        }
+
+
+        public B subprotocolBodyEncoding(String subprotocolBodyEncoding) {
+            getBuildingInstance().setSubprotocolBodyEncoding(subprotocolBodyEncoding);
             return getSelf();
         }
     }
