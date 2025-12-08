@@ -408,6 +408,7 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
 
         public B callbackAddress(String callbackAddress) {
             getBuildingInstance().setCallbackAddress(callbackAddress);
+            return getSelf();
         }
 
 
@@ -473,6 +474,7 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
 
         public B subprotocolBodyEncoding(String subprotocolBodyEncoding) {
             getBuildingInstance().setSubprotocolBodyEncoding(subprotocolBodyEncoding);
+            return getSelf();
         }
 
 
