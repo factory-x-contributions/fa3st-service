@@ -287,11 +287,11 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
 
     private org.eclipse.digitaltwin.aas4j.v3.model.Endpoint endpointFor(String interfaceName, String path, String identifiableId) {
         String safePath = Objects.isNull(identifiableId) ? path : path.concat(identifiableId);
-
+        URI endpointUri = getEndpointUri();
         return new DefaultEndpoint.Builder()
                 ._interface(interfaceName)
                 .protocolInformation(new DefaultProtocolInformation.Builder()
-                        .href(getEndpointUri().resolve("." + getVersionPrefix() + safePath).toASCIIString())
+                        .href(endpointUri.resolve(endpointUri.getPath() + getVersionPrefix() + safePath).toASCIIString())
                         .endpointProtocol(ENDPOINT_PROTOCOL)
                         .endpointProtocolVersion(ENDPOINT_PROTOCOL_VERSION)
                         .subprotocol(config.getSubprotocol())
