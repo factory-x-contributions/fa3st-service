@@ -16,7 +16,6 @@ package de.fraunhofer.iosb.ilt.faaast.service.endpoint.http;
 
 import de.fraunhofer.iosb.ilt.faaast.service.config.CertificateConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.EndpointConfig;
-
 import java.util.Objects;
 
 
@@ -42,11 +41,9 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     public static final String DEFAULT_SUBPROTOCOL_BODY = null;
     public static final String DEFAULT_SUBPROTOCOL_BODY_ENCODING = null;
 
-
     public static Builder builder() {
         return new Builder();
     }
-
 
     private CertificateConfig certificate;
     private boolean corsEnabled;
@@ -65,7 +62,6 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     private String subprotocolBody;
     private String subprotocolBodyEncoding;
     private String callbackAddress;
-
 
     public HttpEndpointConfig() {
         certificate = CertificateConfig.builder()
@@ -314,7 +310,6 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
                 profiles);
     }
 
-
     private abstract static class AbstractBuilder<T extends HttpEndpointConfig, B extends AbstractBuilder<T, B>> extends EndpointConfig.AbstractBuilder<HttpEndpoint, T, B> {
 
         public B certificate(CertificateConfig value) {
@@ -383,7 +378,6 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
         }
 
 
-
         public B callbackAddress(String callbackAddress) {
             getBuildingInstance().setCallbackAddress(callbackAddress);
             return getSelf();
@@ -449,7 +443,6 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
             return getSelf();
         }
     }
-
 
     public static class Builder extends AbstractBuilder<HttpEndpointConfig, Builder> {
 

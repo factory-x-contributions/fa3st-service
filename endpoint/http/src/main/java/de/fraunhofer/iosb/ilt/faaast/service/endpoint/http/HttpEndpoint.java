@@ -83,7 +83,7 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
      * @return the API version prefix
      */
     protected static String getVersionPrefix() {
-        return String.format("api/%s", API_VERSION);
+        return String.format("/api/%s", API_VERSION);
     }
 
 
@@ -264,7 +264,7 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
         return new DefaultEndpoint.Builder()
                 ._interface(interfaceName)
                 .protocolInformation(new DefaultProtocolInformation.Builder()
-                        .href(getEndpointUri().resolve("./" + getVersionPrefix() + safePath).toASCIIString())
+                        .href(getEndpointUri().resolve("." + getVersionPrefix() + safePath).toASCIIString())
                         .endpointProtocol(ENDPOINT_PROTOCOL)
                         .endpointProtocolVersion(ENDPOINT_PROTOCOL_VERSION)
                         .subprotocol(config.getSubprotocol())
