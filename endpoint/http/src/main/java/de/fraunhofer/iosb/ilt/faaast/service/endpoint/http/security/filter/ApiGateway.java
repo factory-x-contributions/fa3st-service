@@ -94,7 +94,7 @@ public class ApiGateway {
 
 
     /**
-     * Filters out AAS that the user is not authorized for.
+     * Filters out all AAS that the user is not authorized for.
      *
      * @param request the HttpRequest
      * @param response the ApiResponse
