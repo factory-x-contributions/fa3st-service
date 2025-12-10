@@ -32,10 +32,14 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     public static final String DEFAULT_CORS_EXPOSED_HEADERS = "";
     public static final long DEFAULT_CORS_MAX_AGE = 3600;
     public static final String DEFAULT_HOSTNAME = null;
+    public static final String DEFAULT_CALLBACK_ADDRESS = null;
     public static final boolean DEFAULT_INCLUDE_ERROR_DETAILS = false;
     public static final int DEFAULT_PORT = 443;
     public static final boolean DEFAULT_SNI_ENABLED = true;
     public static final boolean DEFAULT_SSL_ENABLED = true;
+    public static final String DEFAULT_SUBPROTOCOL = null;
+    public static final String DEFAULT_SUBPROTOCOL_BODY = null;
+    public static final String DEFAULT_SUBPROTOCOL_BODY_ENCODING = null;
 
     public static Builder builder() {
         return new Builder();
@@ -54,6 +58,12 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     private int port;
     private boolean sniEnabled;
     private boolean sslEnabled;
+    private String subprotocol;
+    private String subprotocolBody;
+    private String subprotocolBodyEncoding;
+    private String callbackAddress;
+    private String jwkProvider;
+    private String aclFolder;
 
     public HttpEndpointConfig() {
         certificate = CertificateConfig.builder()
@@ -66,10 +76,14 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
         corsExposedHeaders = DEFAULT_CORS_EXPOSED_HEADERS;
         corsMaxAge = DEFAULT_CORS_MAX_AGE;
         hostname = DEFAULT_HOSTNAME;
+        callbackAddress = DEFAULT_CALLBACK_ADDRESS;
+        subprotocolBodyEncoding = DEFAULT_SUBPROTOCOL_BODY_ENCODING;
         includeErrorDetails = DEFAULT_INCLUDE_ERROR_DETAILS;
         port = DEFAULT_PORT;
         sniEnabled = DEFAULT_SNI_ENABLED;
         sslEnabled = DEFAULT_SSL_ENABLED;
+        subprotocol = DEFAULT_SUBPROTOCOL;
+        subprotocolBody = DEFAULT_SUBPROTOCOL_BODY;
     }
 
 
@@ -163,6 +177,16 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     }
 
 
+    public String getCallbackAddress() {
+        return callbackAddress;
+    }
+
+
+    public void setCallbackAddress(String callbackAddress) {
+        this.callbackAddress = callbackAddress;
+    }
+
+
     public boolean isIncludeErrorDetails() {
         return includeErrorDetails;
     }
@@ -203,6 +227,56 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     }
 
 
+    public String getSubprotocol() {
+        return subprotocol;
+    }
+
+
+    public void setSubprotocol(String subprotocol) {
+        this.subprotocol = subprotocol;
+    }
+
+
+    public String getSubprotocolBody() {
+        return subprotocolBody;
+    }
+
+
+    public void setSubprotocolBody(String subprotocolBody) {
+        this.subprotocolBody = subprotocolBody;
+    }
+
+
+    public String getSubprotocolBodyEncoding() {
+        return subprotocolBodyEncoding;
+    }
+
+
+    public void setSubprotocolBodyEncoding(String subprotocolBodyEncoding) {
+        this.subprotocolBodyEncoding = subprotocolBodyEncoding;
+    }
+
+
+    public String getJwkProvider() {
+        return jwkProvider;
+    }
+
+
+    public void setJwkProvider(String jwkProvider) {
+        this.jwkProvider = jwkProvider;
+    }
+
+
+    public String getAclFolder() {
+        return aclFolder;
+    }
+
+
+    public void setAclFolder(String aclFolder) {
+        this.aclFolder = aclFolder;
+    }
+
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -222,10 +296,18 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
                 && Objects.equals(corsExposedHeaders, that.corsExposedHeaders)
                 && Objects.equals(corsMaxAge, that.corsMaxAge)
                 && Objects.equals(hostname, that.hostname)
+                && Objects.equals(callbackAddress, that.callbackAddress)
                 && Objects.equals(includeErrorDetails, that.includeErrorDetails)
                 && Objects.equals(port, that.port)
                 && Objects.equals(sniEnabled, that.sniEnabled)
                 && Objects.equals(sslEnabled, that.sslEnabled)
+                && Objects.equals(subprotocol, that.subprotocol)
+                && Objects.equals(subprotocolBody, that.subprotocolBody)
+                && Objects.equals(subprotocolBodyEncoding, that.subprotocolBodyEncoding)
+                && Objects.equals(certificate, that.certificate)
+                && Objects.equals(hostname, that.hostname)
+                && Objects.equals(jwkProvider, that.jwkProvider)
+                && Objects.equals(aclFolder, that.aclFolder)
                 && Objects.equals(profiles, that.profiles);
     }
 
@@ -243,10 +325,16 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
                 corsExposedHeaders,
                 corsMaxAge,
                 hostname,
+                callbackAddress,
                 includeErrorDetails,
                 port,
                 sniEnabled,
                 sslEnabled,
+                subprotocol,
+                subprotocolBody,
+                subprotocolBodyEncoding,
+                jwkProvider,
+                aclFolder,
                 profiles);
     }
 
@@ -318,6 +406,18 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
         }
 
 
+        public B callbackAddress(String callbackAddress) {
+            getBuildingInstance().setCallbackAddress(callbackAddress);
+            return getSelf();
+        }
+
+
+        public B jwkProvider(String value) {
+            getBuildingInstance().setJwkProvider(value);
+            return getSelf();
+        }
+
+
         public B includeErrorDetails() {
             getBuildingInstance().setIncludeErrorDetails(true);
             return getSelf();
@@ -356,6 +456,30 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
 
         public B ssl(boolean value) {
             getBuildingInstance().setSslEnabled(value);
+            return getSelf();
+        }
+
+
+        public B subprotocol(String subprotocol) {
+            getBuildingInstance().setSubprotocol(subprotocol);
+            return getSelf();
+        }
+
+
+        public B subprotocolBody(String subprotocolBody) {
+            getBuildingInstance().setSubprotocolBody(subprotocolBody);
+            return getSelf();
+        }
+
+
+        public B subprotocolBodyEncoding(String subprotocolBodyEncoding) {
+            getBuildingInstance().setSubprotocolBodyEncoding(subprotocolBodyEncoding);
+            return getSelf();
+        }
+
+
+        public B aclFolder(String value) {
+            getBuildingInstance().setAclFolder(value);
             return getSelf();
         }
     }
