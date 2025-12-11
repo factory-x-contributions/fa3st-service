@@ -96,6 +96,7 @@
         <json-smart.version>2.5.1</json-smart.version>
         <jsonassert.version>1.5.3</jsonassert.version>
         <jsonpath.version>2.9.0</jsonpath.version>
+        <jsonschema2pojo.version>1.2.2</jsonschema2pojo.version>
         <junit.version>4.13.2</junit.version>
         <jwks.rsa.version>0.23.0</jwks.rsa.version>
         <logback.version>1.5.16</logback.version>

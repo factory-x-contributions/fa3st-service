@@ -19,26 +19,28 @@ import static de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.model.HttpMeth
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.security.FormulaEvaluator;
 import de.fraunhofer.iosb.ilt.faaast.service.model.api.Response;
 import de.fraunhofer.iosb.ilt.faaast.service.model.api.response.aasrepository.GetAllAssetAdministrationShellsResponse;
+import de.fraunhofer.iosb.ilt.faaast.service.model.api.response.submodel.GetSubmodelResponse;
 import de.fraunhofer.iosb.ilt.faaast.service.model.api.response.submodelrepository.GetAllSubmodelsResponse;
-import de.fraunhofer.iosb.ilt.faaast.service.model.security.json.ACL;
-import de.fraunhofer.iosb.ilt.faaast.service.model.security.json.AllAccessPermissionRules;
-import de.fraunhofer.iosb.ilt.faaast.service.model.security.json.AllAccessPermissionRulesRoot;
-import de.fraunhofer.iosb.ilt.faaast.service.model.security.json.Attribute;
-import de.fraunhofer.iosb.ilt.faaast.service.model.security.json.DefACL;
-import de.fraunhofer.iosb.ilt.faaast.service.model.security.json.DefAttributes;
-import de.fraunhofer.iosb.ilt.faaast.service.model.security.json.DefFormula;
-import de.fraunhofer.iosb.ilt.faaast.service.model.security.json.DefObjects;
-import de.fraunhofer.iosb.ilt.faaast.service.model.security.json.Objects;
-import de.fraunhofer.iosb.ilt.faaast.service.model.security.json.Rule;
+import de.fraunhofer.iosb.ilt.faaast.service.model.query.json.AccessPermissionRule;
+import de.fraunhofer.iosb.ilt.faaast.service.model.query.json.Acl;
+import de.fraunhofer.iosb.ilt.faaast.service.model.query.json.AllAccessPermissionRules;
+import de.fraunhofer.iosb.ilt.faaast.service.model.query.json.AttributeItem;
+import de.fraunhofer.iosb.ilt.faaast.service.model.query.json.Defacl;
+import de.fraunhofer.iosb.ilt.faaast.service.model.query.json.Defattribute;
+import de.fraunhofer.iosb.ilt.faaast.service.model.query.json.Defformula;
+import de.fraunhofer.iosb.ilt.faaast.service.model.query.json.Defobject;
+import de.fraunhofer.iosb.ilt.faaast.service.model.query.json.LogicalExpression;
+import de.fraunhofer.iosb.ilt.faaast.service.model.query.json.ObjectItem;
+import de.fraunhofer.iosb.ilt.faaast.service.model.query.json.RightsEnum;
 import de.fraunhofer.iosb.ilt.faaast.service.util.EncodingHelper;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -50,10 +52,13 @@ import java.nio.file.WatchService;
 import java.time.Clock;
 import java.time.LocalTime;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.Set;
+import org.eclipse.digitaltwin.aas4j.v3.model.Submodel;
 import org.slf4j.LoggerFactory;
 
 
@@ -65,8 +70,9 @@ public class ApiGateway {
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(ApiGateway.class);
     private static final String BEARER_KWD = "Bearer";
 
-    private Map<Path, AllAccessPermissionRulesRoot> aclList;
+    private Map<Path, AllAccessPermissionRules> aclList;
     private final String abortMessage = "Invalid ACL folder path, AAS Security will not enforce rules.)";
+    private final String errorMessage = "Invalid ACL rule, skipping.";
 
     public ApiGateway(String aclFolder) {
         initializeAclList(aclFolder);
@@ -82,11 +88,13 @@ public class ApiGateway {
      */
     public boolean isAuthorized(HttpServletRequest request) {
         String token = request.getHeader("Authorization");
-        if (java.util.Objects.isNull(token)) {
+        if (token == null) {
             return AuthServer.filterRules(this.aclList, null, request);
         }
         else {
-            token = token.startsWith("Bearer ") ? token.substring("Bearer ".length()).trim() : token;
+            if (token.startsWith(BEARER_KWD + " ")) {
+                token = token.substring(BEARER_KWD.length() + 1).trim();
+            }
             DecodedJWT jwt = JWT.decode(token);
             return AuthServer.filterRules(this.aclList, jwt.getClaims(), request);
         }
@@ -94,7 +102,7 @@ public class ApiGateway {
 
 
     /**
-     * Filters out all AAS that the user is not authorized for.
+     * Filters out AAS that the user is not authorized for.
      *
      * @param request the HttpRequest
      * @param response the ApiResponse
@@ -103,9 +111,9 @@ public class ApiGateway {
     public Response filterAas(HttpServletRequest request, GetAllAssetAdministrationShellsResponse response) {
         response.getPayload().getContent()
                 .removeIf(aas -> aclList.values().stream()
-                        .noneMatch(a -> a.getAllAccessPermissionRules().getRules().stream()
+                        .noneMatch(a -> a.getRules().stream()
                                 .anyMatch(r -> AuthServer.evaluateRule(r, "/shells/" + EncodingHelper.base64Encode(aas.getId()),
-                                        request.getMethod(), extractClaims(request), a.getAllAccessPermissionRules()))));
+                                        request.getMethod(), extractClaims(request), a))));
         return response;
     }
 
@@ -118,23 +126,59 @@ public class ApiGateway {
      * @return the ApiResponse with only allowed Submodels
      */
     public Response filterSubmodels(HttpServletRequest request, GetAllSubmodelsResponse response) {
-        response.getPayload().getContent()
-                .removeIf(submodel -> aclList.values().stream().noneMatch(
-                        a -> a.getAllAccessPermissionRules().getRules().stream()
-                                .anyMatch(r -> AuthServer.evaluateRule(r, "/submodels/" + EncodingHelper.base64Encode(submodel.getId()),
-                                        request.getMethod(), extractClaims(request), a.getAllAccessPermissionRules()))));
+        response.getPayload().getContent().removeIf(submodel -> {
+            String path = "/submodels/" + EncodingHelper.base64Encode(submodel.getId());
+            String method = request.getMethod();
+            Map<String, Claim> claims = extractClaims(request);
+
+            Map<String, Object> fieldCtx = new HashMap<>();
+            if (submodel.getSemanticId() != null) {
+                fieldCtx.put("$sm#semanticId", submodel.getSemanticId().getKeys().get(0).getValue());
+            }
+
+            return aclList.values().stream()
+                    .noneMatch(allAccess -> allAccess.getRules().stream().anyMatch(rule -> AuthServer.evaluateRule(rule, path, method, claims, allAccess, fieldCtx)));
+        });
         return response;
     }
 
 
-    private java.util.Map<String, Claim> extractClaims(HttpServletRequest request) {
+    /**
+     * Filters out the Submodel that the user is not authorized for.
+     *
+     * @param request the HttpRequest
+     * @param response the ApiResponse
+     * @return true if user is authorized
+     */
+    public boolean filterSubmodel(HttpServletRequest request, GetSubmodelResponse response) {
+        Submodel submodel = response.getPayload();
+        if (Objects.isNull(submodel)) {
+            return true;
+        }
+        String path = "/submodels/" + EncodingHelper.base64Encode(submodel.getId());
+        String method = request.getMethod();
+        Map<String, Claim> claims = extractClaims(request);
+
+        Map<String, Object> fieldCtx = new HashMap<>();
+        if (submodel.getSemanticId() != null) {
+            fieldCtx.put("$sm#semanticId", submodel.getSemanticId().getKeys().get(0).getValue());
+        }
+
+        return aclList.values().stream()
+                .anyMatch(allAccess -> allAccess.getRules().stream().anyMatch(rule -> AuthServer.evaluateRule(rule, path, method, claims, allAccess, fieldCtx)));
+    }
+
+
+    private Map<String, Claim> extractClaims(HttpServletRequest request) {
         String token = request.getHeader("Authorization");
         if (token == null) {
             return null;
         }
-        token = token.startsWith("Bearer ") ? token.substring("Bearer ".length()).trim() : token;
+        if (token.startsWith(BEARER_KWD + " ")) {
+            token = token.substring(BEARER_KWD.length() + 1).trim();
+        }
         try {
-            com.auth0.jwt.interfaces.DecodedJWT jwt = com.auth0.jwt.JWT.decode(token);
+            DecodedJWT jwt = JWT.decode(token);
             return jwt.getClaims();
         }
         catch (com.auth0.jwt.exceptions.JWTDecodeException e) {
@@ -154,76 +198,65 @@ public class ApiGateway {
          * Check all rules that explicitly allows the request.
          * If a rule exists after all filters, true is returned
          *
-         * @param claims
-         * @param request
-         * @return
+         * @param claims the claims found in the token
+         * @param request the request coming in
+         * @return true if there is a valid rule
          */
-        private static boolean filterRules(Map<Path, AllAccessPermissionRulesRoot> aclList, Map<String, Claim> claims, HttpServletRequest request) {
+        private static boolean filterRules(Map<Path, AllAccessPermissionRules> aclList, Map<String, Claim> claims, HttpServletRequest request) {
             String requestPath = request.getRequestURI();
-            String path = requestPath.startsWith(apiPrefix) ? requestPath.substring(9) : requestPath;
+            String path = requestPath.startsWith(apiPrefix) ? requestPath.substring(apiPrefix.length()) : requestPath;
             String method = request.getMethod();
-            List<AllAccessPermissionRulesRoot> relevantRules = aclList.values().stream()
-                    .filter(a -> a.getAllAccessPermissionRules()
-                            .getRules().stream()
-                            .anyMatch(r -> evaluateRule(r, path, method, claims, a.getAllAccessPermissionRules())))
-                    .collect(Collectors.toList());
+            List<AllAccessPermissionRules> relevantRules = aclList.values().stream()
+                    .filter(a -> a.getRules().stream()
+                            .anyMatch(r -> evaluateRule(r, path, method, claims, a)))
+                    .toList();
             return !relevantRules.isEmpty();
         }
 
 
-        private static boolean verifyAllClaims(Map<String, Claim> claims, Rule rule, AllAccessPermissionRules allAccess) {
-            ACL acl = getAcl(rule, allAccess);
-            if (getAttributes(acl, allAccess).stream()
-                    .anyMatch(attr -> "ANONYMOUS".equals(attr.getGLOBAL())
-                            && Boolean.TRUE.equals(getFormula(rule, allAccess).get("$boolean")))) {
-                return true;
-            }
-            if (claims == null) {
-                return false;
-            }
-            List<String> claimValues = getAttributes(acl, allAccess).stream()
-                    .filter(attr -> attr.getGLOBAL() == null)
-                    .map(Attribute::getCLAIM)
-                    .filter(java.util.Objects::nonNull)
-                    .collect(Collectors.toList());
-            Map<String, String> claimList = new HashMap<>();
-            for (String val: claimValues) {
-                Claim claim = claims.get(val);
-                if (claim != null) {
-                    claimList.put(val, claim.asString());
+        private static boolean verifyAllClaims(Map<String, Claim> claims, AccessPermissionRule rule, AllAccessPermissionRules allAccess, Map<String, Object> fieldCtx) {
+            Acl acl = getAcl(rule, allAccess);
+
+            boolean isAnonymous = getAttributes(acl, allAccess).stream()
+                    .anyMatch(attr -> attr.getGlobal() != null && "ANONYMOUS".equals(attr.getGlobal().value()));
+
+            List<String> claimNames = getAttributes(acl, allAccess).stream()
+                    .filter(attr -> attr.getGlobal() == null)
+                    .map(AttributeItem::getClaim)
+                    .filter(Objects::nonNull)
+                    .toList();
+
+            // Build  context
+            Map<String, Object> ctx = new HashMap<>();
+            if (claims != null) {
+                for (String name: claimNames) {
+                    Claim c = claims.get(name);
+                    if (c != null) {
+                        ctx.put("CLAIM:" + name, c.asString());
+                    }
                 }
             }
-            return !claimValues.isEmpty()
-                    && claimValues.stream()
-                            .allMatch(value -> {
-                                return evaluateFormula(getFormula(rule, allAccess), claimList);
-                            });
-        }
-
-
-        private static boolean evaluateFormula(Map<String, Object> formula,
-                                               Map<String, String> claims) {
-            Map<String, Object> ctx = new HashMap<>();
-            for (var c: claims.entrySet()) {
-                ctx.put("CLAIM:" + c.getKey(), c.getValue());
+            // Add $sm#semanticId
+            if (fieldCtx != null && !fieldCtx.isEmpty()) {
+                ctx.putAll(fieldCtx);
             }
-            //ctx.put("CLAIM:" + claimName, claimValue);
-            ctx.put("UTCNOW", LocalTime.now(Clock.systemUTC())); // $GLOBAL → UTCNOW
-            return FormulaEvaluator.evaluate(formula, ctx);
+            ctx.put("UTCNOW", LocalTime.now(Clock.systemUTC()));
+            if (isAnonymous) {
+                return FormulaEvaluator.evaluate(getFormula(rule, allAccess), ctx);
+            }
+            return !ctx.entrySet().stream().filter(e -> e.getKey().startsWith("CLAIM:")).toList().isEmpty() &&
+                    FormulaEvaluator.evaluate(getFormula(rule, allAccess), ctx);
         }
 
 
-        private static boolean evaluateRights(List<String> aclRights, String method, String path) {
-            // We need the path to check if the request is an operation invocation (EXECUTE)
+        private static boolean evaluateRights(List<RightsEnum> aclRights, String method, String path) {
             String requiredRight = isOperationRequest(method, path) ? "EXECUTE" : getRequiredRight(method);
-
-            return aclRights.contains("ALL") || aclRights.contains(requiredRight);
+            return aclRights.contains(RightsEnum.ALL) || aclRights.contains(RightsEnum.valueOf(requiredRight));
         }
 
 
         private static boolean isOperationRequest(String method, String path) {
-            // Requirements for an operation request according to FAAAST docs:
-            // Method: POST, URL suffix: /invoke, /invoke-async, /invoke/$value, /invoke-async/$value
+            // Requirements: POST and URL suffix: invoke, invoke-async, invoke/$value, invoke-async/$value
             String cleanPath;
             String[] pathParts = path.split("/");
 
@@ -234,7 +267,7 @@ public class ApiGateway {
                 cleanPath = pathParts[pathParts.length - 1];
             }
 
-            return POST.name().equals(method) && ("/invoke".equals(cleanPath) || "invoke-async".equals(path));
+            return POST.name().equals(method) && ("invoke".equals(cleanPath) || "invoke-async".equals(cleanPath));
         }
 
 
@@ -255,19 +288,19 @@ public class ApiGateway {
                 return false;
             }
 
-            if (identifiable.equals("(Submodel)*")) {
+            if ("(Submodel)*".equals(identifiable)) {
                 return true;
             }
             else if (identifiable.startsWith("(Submodel)")) {
                 String id = identifiable.substring(10);
-                return path.contains(EncodingHelper.base64Encode(id));
+                return path.contains(Objects.requireNonNull(EncodingHelper.base64Encode(id)));
             }
-            if (identifiable.equals("(AssetAdministrationShell)*")) {
+            if ("(AssetAdministrationShell)*".equals(identifiable)) {
                 return true;
             }
             else if (identifiable.startsWith("(AssetAdministrationShell)")) {
                 String id = identifiable.substring(26);
-                return path.contains(EncodingHelper.base64Encode(id));
+                return path.contains(Objects.requireNonNull(EncodingHelper.base64Encode(id)));
             }
             return false;
         }
@@ -278,53 +311,53 @@ public class ApiGateway {
                 if (!path.startsWith("/shell-descriptors")) {
                     return false;
                 }
-                if (descriptor.equals("(aasDesc)*")) {
+                if ("(aasDesc)*".equals(descriptor)) {
                     return true;
                 }
                 else if (descriptor.startsWith("(aasDesc)")) {
                     String id = descriptor.substring(9);
-                    return path.contains(EncodingHelper.base64UrlEncode(id));
+                    return path.contains(Objects.requireNonNull(EncodingHelper.base64UrlEncode(id)));
                 }
             }
             else if (descriptor.startsWith("(smDesc)")) {
                 if (!path.startsWith("/submodel-descriptors")) {
                     return false;
                 }
-                if (descriptor.equals("(smDesc)*")) {
+                if ("(smDesc)*".equals(descriptor)) {
                     return true;
                 }
                 else if (descriptor.startsWith("(smDesc)")) {
                     String id = descriptor.substring(8);
-                    return path.contains(EncodingHelper.base64UrlEncode(id));
+                    return path.contains(Objects.requireNonNull(EncodingHelper.base64UrlEncode(id)));
                 }
             }
             return false;
         }
 
 
-        private static boolean evaluateRule(Rule rule, String path, String method, Map<String, Claim> claims, AllAccessPermissionRules allAccess) {
-            ACL acl = getAcl(rule, allAccess);
-            return acl != null
-                    && getAttributes(acl, allAccess) != null
-                    && acl.getRIGHTS() != null
-                    && getObjects(rule, allAccess) != null
+        private static boolean evaluateRule(AccessPermissionRule rule, String path, String method, Map<String, Claim> claims, AllAccessPermissionRules allAccess) {
+            return evaluateRule(rule, path, method, claims, allAccess, null);
+        }
+
+
+        private static boolean evaluateRule(AccessPermissionRule rule, String path, String method, Map<String, Claim> claims, AllAccessPermissionRules allAccess,
+                                            Map<String, Object> fieldCtx) {
+            Acl acl = getAcl(rule, allAccess);
+            return acl != null && getAttributes(acl, allAccess) != null && acl.getRights() != null && getObjects(rule, allAccess) != null
                     && getObjects(rule, allAccess).stream().anyMatch(attr -> {
-                        if (attr.getROUTE() != null) {
-                            return "*".equals(attr.getROUTE()) || attr.getROUTE().contains(path);
+                        if (attr.getRoute() != null) {
+                            return "*".equals(attr.getRoute()) || attr.getRoute().contains(path);
                         }
-                        else if (attr.getIDENTIFIABLE() != null) {
-                            return checkIdentifiable(path, attr.getIDENTIFIABLE());
+                        else if (attr.getIdentifiable() != null) {
+                            return checkIdentifiable(path, attr.getIdentifiable());
                         }
-                        else if (attr.getDESCRIPTOR() != null) {
-                            return checkDescriptor(path, attr.getDESCRIPTOR());
+                        else if (attr.getDescriptor() != null) {
+                            return checkDescriptor(path, attr.getDescriptor());
                         }
                         else {
                             return false;
                         }
-                    })
-                    && "ALLOW".equals(acl.getACCESS())
-                    && evaluateRights(acl.getRIGHTS(), method, path)
-                    && verifyAllClaims(claims, rule, allAccess);
+                    }) && "ALLOW".equals(acl.getAccess().value()) && evaluateRights(acl.getRights(), method, path) && verifyAllClaims(claims, rule, allAccess, fieldCtx);
         }
     }
 
@@ -342,14 +375,20 @@ public class ApiGateway {
         if (jsonFiles != null) {
             for (File file: jsonFiles) {
                 Path filePath = file.toPath();
-                String content;
                 try {
-                    content = new String(Files.readAllBytes(filePath), StandardCharsets.UTF_8);
-                    aclList.put(filePath, mapper.readValue(
-                            content, AllAccessPermissionRulesRoot.class));
+                    String jsonContent = Files.readString(filePath);
+                    JsonNode rootNode = mapper.readTree(jsonContent);
+                    AllAccessPermissionRules allRules;
+                    if (rootNode.has("AllAccessPermissionRules")) {
+                        allRules = mapper.treeToValue(rootNode.get("AllAccessPermissionRules"), AllAccessPermissionRules.class);
+                    }
+                    else {
+                        allRules = mapper.readValue(jsonContent, AllAccessPermissionRules.class);
+                    }
+                    aclList.put(filePath, allRules);
                 }
                 catch (IOException e) {
-                    LOGGER.error(abortMessage);
+                    LOGGER.error(errorMessage);
                 }
             }
         }
@@ -375,7 +414,7 @@ public class ApiGateway {
             monitorLoop(watchService, folderToWatch);
         }
         catch (IOException e) {
-            LOGGER.error(abortMessage);
+            LOGGER.error(errorMessage);
         }
 
     }
@@ -385,12 +424,14 @@ public class ApiGateway {
         ObjectMapper mapper = new ObjectMapper();
         Thread monitoringThread = new Thread(() -> {
             while (!Thread.currentThread().isInterrupted()) {
-                WatchKey watchKey = null;
+                WatchKey watchKey;
                 try {
                     watchKey = watchService.take();
                 }
                 catch (InterruptedException e) {
-                    LOGGER.error(abortMessage);
+                    Thread.currentThread().interrupt(); // restore interrupt status
+                    LOGGER.warn("ACL monitoring thread interrupted", e);
+                    break; // exit loop
                 }
                 for (WatchEvent<?> event: watchKey.pollEvents()) {
                     WatchEvent.Kind<?> kind = event.kind();
@@ -400,11 +441,19 @@ public class ApiGateway {
                     if (filePath.toString().toLowerCase().endsWith(".json")) {
                         if (kind == StandardWatchEventKinds.ENTRY_CREATE) {
                             try {
-                                aclList.put(absolutePath, mapper.readValue(
-                                        new String(Files.readAllBytes(absolutePath), StandardCharsets.UTF_8), AllAccessPermissionRulesRoot.class));
+                                String jsonContent = Files.readString(absolutePath);
+                                JsonNode rootNode = mapper.readTree(jsonContent);
+                                AllAccessPermissionRules allRules;
+                                if (rootNode.has("AllAccessPermissionRules")) {
+                                    allRules = mapper.treeToValue(rootNode.get("AllAccessPermissionRules"), AllAccessPermissionRules.class);
+                                }
+                                else {
+                                    allRules = mapper.readValue(jsonContent, AllAccessPermissionRules.class);
+                                }
+                                aclList.put(absolutePath, allRules);
                             }
                             catch (IOException e) {
-                                LOGGER.error(abortMessage);
+                                LOGGER.error(errorMessage);
                             }
                             LOGGER.info("Added new ACL rule.");
                         }
@@ -414,10 +463,9 @@ public class ApiGateway {
                         }
                     }
                 }
-                // Reset the key to receive further watch events
                 boolean valid = watchKey.reset();
                 if (!valid) {
-                    System.out.println("WatchKey no longer valid; exiting.");
+                    LOGGER.info("WatchKey no longer valid; exiting.");
                     break;
                 }
             }
@@ -426,17 +474,19 @@ public class ApiGateway {
     }
 
 
-    private static ACL getAcl(Rule rule, AllAccessPermissionRules allAccess) {
-        if (rule.getACL() != null) {
-            return rule.getACL();
+    private static Acl getAcl(AccessPermissionRule rule, AllAccessPermissionRules allAccess) {
+        if (rule.getAcl() != null) {
+            return rule.getAcl();
         }
-        else if (rule.getUSEACL() != null) {
-            Optional<DefACL> acl = allAccess.getDEFACLS().stream().filter(a -> (a.getName() == null ? a.getName() == null : a.getName().equals(a.getName()))).findAny();
+        else if (rule.getUseacl() != null) {
+            Optional<Defacl> acl = allAccess.getDefacls().stream()
+                    .filter(a -> Objects.equals(a.getName(), rule.getUseacl()))
+                    .findAny();
             if (acl.isPresent()) {
                 return acl.get().getAcl();
             }
             else {
-                throw new IllegalArgumentException("DEFACL not found: " + rule.getUSEACL());
+                throw new IllegalArgumentException("DEFACL not found: " + rule.getUseacl());
             }
         }
         else {
@@ -445,18 +495,19 @@ public class ApiGateway {
     }
 
 
-    private static List<Attribute> getAttributes(ACL acl, AllAccessPermissionRules allAccess) {
-        if (acl.getATTRIBUTES() != null) {
-            return acl.getATTRIBUTES();
+    private static List<AttributeItem> getAttributes(Acl acl, AllAccessPermissionRules allAccess) {
+        if ((acl.getAttributes() != null) && (!acl.getAttributes().isEmpty())) {
+            return acl.getAttributes();
         }
-        else if (acl.getUSEATTRIBUTES() != null) {
-            Optional<DefAttributes> attribute = allAccess.getDEFATTRIBUTES().stream().filter(a -> (a.getName() == null ? a.getName() == null : a.getName().equals(a.getName())))
+        else if (acl.getUseattributes() != null) {
+            Optional<Defattribute> attribute = allAccess.getDefattributes().stream()
+                    .filter(a -> Objects.equals(a.getName(), acl.getUseattributes()))
                     .findAny();
             if (attribute.isPresent()) {
                 return attribute.get().getAttributes();
             }
             else {
-                throw new IllegalArgumentException("DEFATTRIBUTES not found: " + acl.getUSEATTRIBUTES());
+                throw new IllegalArgumentException("DEFATTRIBUTES not found: " + acl.getUseattributes());
             }
         }
         else {
@@ -465,17 +516,19 @@ public class ApiGateway {
     }
 
 
-    private static Map<String, Object> getFormula(Rule rule, AllAccessPermissionRules allAccess) {
-        if (rule.getFORMULA() != null) {
-            return rule.getFORMULA();
+    private static LogicalExpression getFormula(AccessPermissionRule rule, AllAccessPermissionRules allAccess) {
+        if (rule.getFormula() != null) {
+            return rule.getFormula();
         }
-        else if (rule.getUSEFORMULA() != null) {
-            Optional<DefFormula> formula = allAccess.getDEFFORMULAS().stream().filter(a -> (a.getName() == null ? a.getName() == null : a.getName().equals(a.getName()))).findAny();
+        else if (rule.getUseformula() != null) {
+            Optional<Defformula> formula = allAccess.getDefformulas().stream()
+                    .filter(a -> Objects.equals(a.getName(), rule.getUseformula()))
+                    .findAny();
             if (formula.isPresent()) {
                 return formula.get().getFormula();
             }
             else {
-                throw new IllegalArgumentException("DEFFORMULA not found: " + rule.getUSEFORMULA());
+                throw new IllegalArgumentException("DEFFORMULA not found: " + rule.getUseformula());
             }
         }
         else {
@@ -484,17 +537,24 @@ public class ApiGateway {
     }
 
 
-    private static List<Objects> getObjects(Rule rule, AllAccessPermissionRules allAccess) {
-        if (rule.getOBJECTS() != null) {
-            return rule.getOBJECTS();
+    private static List<ObjectItem> getObjects(AccessPermissionRule rule, AllAccessPermissionRules allAccess) {
+        if ((rule.getObjects() != null) && (!rule.getObjects().isEmpty())) {
+            return rule.getObjects();
         }
-        else if (rule.getUSEOBJECTS() != null) {
-            Optional<DefObjects> objects = allAccess.getDEFOBJECTS().stream().filter(a -> (a.getName() == null ? a.getName() == null : a.getName().equals(a.getName()))).findAny();
-            if (objects.isPresent()) {
-                return objects.get().getObjects();
+        else if (rule.getUseobjects() != null) {
+            // We must collect all Defobjects in all Useobjects
+            List<Defobject> objectList = allAccess.getDefobjects().stream()
+                    .filter(a -> rule.getUseobjects().contains(a.getName()))
+                    .toList();
+            if (objectList.isEmpty()) {
+                throw new IllegalArgumentException("DEFOBJECTS not found: " + rule.getUseobjects());
             }
             else {
-                throw new IllegalArgumentException("DEFOBJECTS not found: " + rule.getUSEFORMULA());
+                Set<ObjectItem> retval = new HashSet<>();
+                for (Defobject item: objectList) {
+                    retval.addAll(item.getObjects());
+                }
+                return retval.stream().toList();
             }
         }
         else {

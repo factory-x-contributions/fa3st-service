@@ -16,6 +16,7 @@ package de.fraunhofer.iosb.ilt.faaast.service.endpoint.http;
 
 import de.fraunhofer.iosb.ilt.faaast.service.config.CertificateConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.EndpointConfig;
+import de.fraunhofer.iosb.ilt.faaast.service.util.Ensure;
 import java.util.Objects;
 
 
@@ -32,14 +33,13 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     public static final String DEFAULT_CORS_EXPOSED_HEADERS = "";
     public static final long DEFAULT_CORS_MAX_AGE = 3600;
     public static final String DEFAULT_HOSTNAME = null;
-    public static final String DEFAULT_CALLBACK_ADDRESS = null;
+    public static final String DEFAULT_PATH_PREFIX = "/api/v3.0";
     public static final boolean DEFAULT_INCLUDE_ERROR_DETAILS = false;
     public static final int DEFAULT_PORT = 443;
     public static final boolean DEFAULT_SNI_ENABLED = true;
     public static final boolean DEFAULT_SSL_ENABLED = true;
-    public static final String DEFAULT_SUBPROTOCOL = null;
-    public static final String DEFAULT_SUBPROTOCOL_BODY = null;
-    public static final String DEFAULT_SUBPROTOCOL_BODY_ENCODING = null;
+
+    private static final String PATH_PREFIX_REGEX = "^/.*[^/]$";
 
     public static Builder builder() {
         return new Builder();
@@ -54,14 +54,11 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     private String corsExposedHeaders;
     private long corsMaxAge;
     private String hostname;
+    private String pathPrefix;
     private boolean includeErrorDetails;
     private int port;
     private boolean sniEnabled;
     private boolean sslEnabled;
-    private String subprotocol;
-    private String subprotocolBody;
-    private String subprotocolBodyEncoding;
-    private String callbackAddress;
     private String jwkProvider;
     private String aclFolder;
 
@@ -76,14 +73,11 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
         corsExposedHeaders = DEFAULT_CORS_EXPOSED_HEADERS;
         corsMaxAge = DEFAULT_CORS_MAX_AGE;
         hostname = DEFAULT_HOSTNAME;
-        callbackAddress = DEFAULT_CALLBACK_ADDRESS;
-        subprotocolBodyEncoding = DEFAULT_SUBPROTOCOL_BODY_ENCODING;
+        pathPrefix = DEFAULT_PATH_PREFIX;
         includeErrorDetails = DEFAULT_INCLUDE_ERROR_DETAILS;
         port = DEFAULT_PORT;
         sniEnabled = DEFAULT_SNI_ENABLED;
         sslEnabled = DEFAULT_SSL_ENABLED;
-        subprotocol = DEFAULT_SUBPROTOCOL;
-        subprotocolBody = DEFAULT_SUBPROTOCOL_BODY;
     }
 
 
@@ -177,13 +171,19 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     }
 
 
-    public String getCallbackAddress() {
-        return callbackAddress;
+    public String getPathPrefix() {
+        return pathPrefix;
     }
 
 
-    public void setCallbackAddress(String callbackAddress) {
-        this.callbackAddress = callbackAddress;
+    /**
+     * Sets the path prefix of this endpoint. The path prefix must start with a "/" and not end with a "/".
+     *
+     * @param pathPrefix The path prefix used for HTTP requests to this endpoint.
+     */
+    public void setPathPrefix(String pathPrefix) {
+        validatePathPrefix(pathPrefix);
+        this.pathPrefix = pathPrefix;
     }
 
 
@@ -227,36 +227,6 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     }
 
 
-    public String getSubprotocol() {
-        return subprotocol;
-    }
-
-
-    public void setSubprotocol(String subprotocol) {
-        this.subprotocol = subprotocol;
-    }
-
-
-    public String getSubprotocolBody() {
-        return subprotocolBody;
-    }
-
-
-    public void setSubprotocolBody(String subprotocolBody) {
-        this.subprotocolBody = subprotocolBody;
-    }
-
-
-    public String getSubprotocolBodyEncoding() {
-        return subprotocolBodyEncoding;
-    }
-
-
-    public void setSubprotocolBodyEncoding(String subprotocolBodyEncoding) {
-        this.subprotocolBodyEncoding = subprotocolBodyEncoding;
-    }
-
-
     public String getJwkProvider() {
         return jwkProvider;
     }
@@ -296,14 +266,11 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
                 && Objects.equals(corsExposedHeaders, that.corsExposedHeaders)
                 && Objects.equals(corsMaxAge, that.corsMaxAge)
                 && Objects.equals(hostname, that.hostname)
-                && Objects.equals(callbackAddress, that.callbackAddress)
+                && Objects.equals(pathPrefix, that.pathPrefix)
                 && Objects.equals(includeErrorDetails, that.includeErrorDetails)
                 && Objects.equals(port, that.port)
                 && Objects.equals(sniEnabled, that.sniEnabled)
                 && Objects.equals(sslEnabled, that.sslEnabled)
-                && Objects.equals(subprotocol, that.subprotocol)
-                && Objects.equals(subprotocolBody, that.subprotocolBody)
-                && Objects.equals(subprotocolBodyEncoding, that.subprotocolBodyEncoding)
                 && Objects.equals(certificate, that.certificate)
                 && Objects.equals(hostname, that.hostname)
                 && Objects.equals(jwkProvider, that.jwkProvider)
@@ -325,17 +292,20 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
                 corsExposedHeaders,
                 corsMaxAge,
                 hostname,
-                callbackAddress,
+                pathPrefix,
                 includeErrorDetails,
                 port,
                 sniEnabled,
                 sslEnabled,
-                subprotocol,
-                subprotocolBody,
-                subprotocolBodyEncoding,
                 jwkProvider,
                 aclFolder,
                 profiles);
+    }
+
+
+    private void validatePathPrefix(String pathPrefix) {
+        Ensure.require(pathPrefix.matches(PATH_PREFIX_REGEX),
+                String.format("%s.%s must match regex %s", this.getClass().getSimpleName(), "pathPrefix", PATH_PREFIX_REGEX));
     }
 
     private abstract static class AbstractBuilder<T extends HttpEndpointConfig, B extends AbstractBuilder<T, B>> extends EndpointConfig.AbstractBuilder<HttpEndpoint, T, B> {
@@ -406,14 +376,14 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
         }
 
 
-        public B callbackAddress(String callbackAddress) {
-            getBuildingInstance().setCallbackAddress(callbackAddress);
+        public B jwkProvider(String value) {
+            getBuildingInstance().setJwkProvider(value);
             return getSelf();
         }
 
 
-        public B jwkProvider(String value) {
-            getBuildingInstance().setJwkProvider(value);
+        public B pathPrefix(String value) {
+            getBuildingInstance().setPathPrefix(value);
             return getSelf();
         }
 
@@ -456,24 +426,6 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
 
         public B ssl(boolean value) {
             getBuildingInstance().setSslEnabled(value);
-            return getSelf();
-        }
-
-
-        public B subprotocol(String subprotocol) {
-            getBuildingInstance().setSubprotocol(subprotocol);
-            return getSelf();
-        }
-
-
-        public B subprotocolBody(String subprotocolBody) {
-            getBuildingInstance().setSubprotocolBody(subprotocolBody);
-            return getSelf();
-        }
-
-
-        public B subprotocolBodyEncoding(String subprotocolBodyEncoding) {
-            getBuildingInstance().setSubprotocolBodyEncoding(subprotocolBodyEncoding);
             return getSelf();
         }
 
