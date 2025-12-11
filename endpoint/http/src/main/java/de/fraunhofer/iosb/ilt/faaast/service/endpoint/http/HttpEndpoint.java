@@ -26,7 +26,6 @@ import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.security.filter.JwtVa
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.util.HttpHelper;
 import de.fraunhofer.iosb.ilt.faaast.service.exception.EndpointException;
 import de.fraunhofer.iosb.ilt.faaast.service.model.Interface;
-import de.fraunhofer.iosb.ilt.faaast.service.model.Version;
 import de.fraunhofer.iosb.ilt.faaast.service.util.EncodingHelper;
 import jakarta.servlet.DispatcherType;
 import java.io.File;
@@ -69,7 +68,6 @@ import org.slf4j.LoggerFactory;
  */
 public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
 
-    public static final Version API_VERSION = Version.V3_0;
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpEndpoint.class);
     private static final CertificateInformation SELFSIGNED_CERTIFICATE_INFORMATION = CertificateInformation.builder()
             .applicationUri("urn:de:fraunhofer:iosb:ilt:faaast:service:endpoint:http")
@@ -89,16 +87,6 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
     }
 
     private ServletContextHandler context;
-
-    /**
-     * Gets the API version prefix.
-     *
-     * @return the API version prefix
-     */
-    protected static String getVersionPrefix() {
-        return String.format("/api/%s", API_VERSION);
-    }
-
 
     @Override
     public void start() throws EndpointException {
@@ -253,7 +241,7 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
         if (config.getProfiles().stream()
                 .flatMap(x -> x.getInterfaces().stream())
                 .anyMatch(x -> Objects.equals(x, Interface.AAS))) {
-            result.add(endpointFor("AAS-3.0", "/shells/", EncodingHelper.base64UrlEncode(aasId)));
+            result.add(endpointFor("AAS-3.0", "/shells/" + EncodingHelper.base64UrlEncode(aasId)));
         }
         return result;
     }
@@ -273,30 +261,30 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
         if (config.getProfiles().stream()
                 .flatMap(x -> x.getInterfaces().stream())
                 .anyMatch(x -> Objects.equals(x, Interface.SUBMODEL))) {
-            result.add(endpointFor("SUBMODEL-3.0", "/submodels/", EncodingHelper.base64UrlEncode(submodelId)));
+            result.add(endpointFor("SUBMODEL-3.0", "/submodels/" + EncodingHelper.base64UrlEncode(submodelId)));
         }
 
         return result;
     }
 
 
-    private org.eclipse.digitaltwin.aas4j.v3.model.Endpoint endpointFor(String interfaceName, String path) {
-        return endpointFor(interfaceName, path, null);
+    /**
+     * Gets the configured path prefix (e.g., /api/v3.0).
+     *
+     * @return the configured path prefix
+     */
+    public String getPathPrefix() {
+        return config.getPathPrefix();
     }
 
 
-    private org.eclipse.digitaltwin.aas4j.v3.model.Endpoint endpointFor(String interfaceName, String path, String identifiableId) {
-        String safePath = Objects.isNull(identifiableId) ? path : path.concat(identifiableId);
-        URI endpointUri = getEndpointUri();
+    private org.eclipse.digitaltwin.aas4j.v3.model.Endpoint endpointFor(String interfaceName, String path) {
         return new DefaultEndpoint.Builder()
                 ._interface(interfaceName)
                 .protocolInformation(new DefaultProtocolInformation.Builder()
-                        .href(endpointUri.resolve(endpointUri.getPath() + getVersionPrefix() + safePath).toASCIIString())
+                        .href(getEndpointUri().resolve(path).toASCIIString())
                         .endpointProtocol(ENDPOINT_PROTOCOL)
                         .endpointProtocolVersion(ENDPOINT_PROTOCOL_VERSION)
-                        .subprotocol(config.getSubprotocol())
-                        .subprotocolBody(render(config.getSubprotocolBody(), identifiableId))
-                        .subprotocolBodyEncoding(config.getSubprotocolBodyEncoding())
                         .securityAttributes(new DefaultSecurityAttributeObject.Builder()
                                 .type(SecurityTypeEnum.NONE)
                                 .key("")
@@ -307,19 +295,8 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
     }
 
 
-    private String render(String subprotocolBodyTemplate, String identifiableId) {
-        if (subprotocolBodyTemplate == null) {
-            return null;
-        }
-        return subprotocolBodyTemplate.replace("{}", identifiableId == null ? "" : identifiableId);
-    }
-
-
     private URI getEndpointUri() {
         URI result = server.getURI();
-        if (Objects.nonNull(config.getCallbackAddress())) {
-            return URI.create(config.getCallbackAddress());
-        }
         if (Objects.nonNull(config.getHostname())) {
             try {
                 result = new URI(
@@ -327,7 +304,7 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
                         result.getUserInfo(),
                         config.getHostname(),
                         result.getPort(),
-                        result.getPath(),
+                        config.getPathPrefix().concat(result.getPath()),
                         result.getQuery(),
                         result.getFragment());
             }
