@@ -61,7 +61,8 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     private String subprotocol;
     private String subprotocolBody;
     private String subprotocolBodyEncoding;
-    private String callbackAddress;
+    private String shellCallbackAddress;
+    private String submodelCallbackAddress;
     private String jwkProvider;
     private String aclFolder;
 
@@ -76,7 +77,8 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
         corsExposedHeaders = DEFAULT_CORS_EXPOSED_HEADERS;
         corsMaxAge = DEFAULT_CORS_MAX_AGE;
         hostname = DEFAULT_HOSTNAME;
-        callbackAddress = DEFAULT_CALLBACK_ADDRESS;
+        shellCallbackAddress = DEFAULT_CALLBACK_ADDRESS;
+        submodelCallbackAddress = DEFAULT_CALLBACK_ADDRESS;
         subprotocolBodyEncoding = DEFAULT_SUBPROTOCOL_BODY_ENCODING;
         includeErrorDetails = DEFAULT_INCLUDE_ERROR_DETAILS;
         port = DEFAULT_PORT;
@@ -177,13 +179,23 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     }
 
 
-    public String getCallbackAddress() {
-        return callbackAddress;
+    public String getShellCallbackAddress() {
+        return shellCallbackAddress;
     }
 
 
-    public void setCallbackAddress(String callbackAddress) {
-        this.callbackAddress = callbackAddress;
+    public void setShellCallbackAddress(String shellCallbackAddress) {
+        this.shellCallbackAddress = shellCallbackAddress;
+    }
+
+
+    public String getSubmodelCallbackAddress() {
+        return submodelCallbackAddress;
+    }
+
+
+    public void setSubmodelCallbackAddress(String submodelCallbackAddress) {
+        this.submodelCallbackAddress = submodelCallbackAddress;
     }
 
 
@@ -296,7 +308,8 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
                 && Objects.equals(corsExposedHeaders, that.corsExposedHeaders)
                 && Objects.equals(corsMaxAge, that.corsMaxAge)
                 && Objects.equals(hostname, that.hostname)
-                && Objects.equals(callbackAddress, that.callbackAddress)
+                && Objects.equals(shellCallbackAddress, that.shellCallbackAddress)
+                && Objects.equals(submodelCallbackAddress, that.submodelCallbackAddress)
                 && Objects.equals(includeErrorDetails, that.includeErrorDetails)
                 && Objects.equals(port, that.port)
                 && Objects.equals(sniEnabled, that.sniEnabled)
@@ -325,7 +338,8 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
                 corsExposedHeaders,
                 corsMaxAge,
                 hostname,
-                callbackAddress,
+                shellCallbackAddress,
+                submodelCallbackAddress,
                 includeErrorDetails,
                 port,
                 sniEnabled,
@@ -406,8 +420,14 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
         }
 
 
-        public B callbackAddress(String callbackAddress) {
-            getBuildingInstance().setCallbackAddress(callbackAddress);
+        public B shellCallbackAddress(String shellCallbackAddress) {
+            getBuildingInstance().setShellCallbackAddress(shellCallbackAddress);
+            return getSelf();
+        }
+
+
+        public B submodelCallbackAddress(String submodelCallbackAddress) {
+            getBuildingInstance().setSubmodelCallbackAddress(submodelCallbackAddress);
             return getSelf();
         }
 
