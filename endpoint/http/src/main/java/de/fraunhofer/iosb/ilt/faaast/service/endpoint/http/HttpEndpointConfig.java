@@ -63,7 +63,7 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     private String subprotocolBodyEncoding;
     private String shellCallbackAddress;
     private String submodelCallbackAddress;
-    private String jwkProvider;
+    private String trustedListUrl;
     private String aclFolder;
 
     public HttpEndpointConfig() {
@@ -269,13 +269,13 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     }
 
 
-    public String getJwkProvider() {
-        return jwkProvider;
+    public String getTrustedListUrl() {
+        return trustedListUrl;
     }
 
 
-    public void setJwkProvider(String jwkProvider) {
-        this.jwkProvider = jwkProvider;
+    public void setTrustedListUrl(String trustedListUrl) {
+        this.trustedListUrl = trustedListUrl;
     }
 
 
@@ -319,7 +319,7 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
                 && Objects.equals(subprotocolBodyEncoding, that.subprotocolBodyEncoding)
                 && Objects.equals(certificate, that.certificate)
                 && Objects.equals(hostname, that.hostname)
-                && Objects.equals(jwkProvider, that.jwkProvider)
+                && Objects.equals(trustedListUrl, that.trustedListUrl)
                 && Objects.equals(aclFolder, that.aclFolder)
                 && Objects.equals(profiles, that.profiles);
     }
@@ -347,7 +347,7 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
                 subprotocol,
                 subprotocolBody,
                 subprotocolBodyEncoding,
-                jwkProvider,
+                trustedListUrl,
                 aclFolder,
                 profiles);
     }
@@ -432,8 +432,8 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
         }
 
 
-        public B jwkProvider(String value) {
-            getBuildingInstance().setJwkProvider(value);
+        public B trustedListUrl(String value) {
+            getBuildingInstance().setTrustedListUrl(value);
             return getSelf();
         }
 
