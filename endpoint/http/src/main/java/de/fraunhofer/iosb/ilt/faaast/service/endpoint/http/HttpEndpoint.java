@@ -16,13 +16,12 @@ package de.fraunhofer.iosb.ilt.faaast.service.endpoint.http;
 
 import static de.fraunhofer.iosb.ilt.faaast.service.certificate.util.KeyStoreHelper.DEFAULT_ALIAS;
 
-import com.auth0.jwk.JwkProvider;
-import com.auth0.jwk.UrlJwkProvider;
 import de.fraunhofer.iosb.ilt.faaast.service.certificate.CertificateData;
 import de.fraunhofer.iosb.ilt.faaast.service.certificate.CertificateInformation;
 import de.fraunhofer.iosb.ilt.faaast.service.certificate.util.KeyStoreHelper;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.AbstractEndpoint;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.security.filter.JwtValidationFilter;
+import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.security.trustList.TrustedListService;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.util.HttpHelper;
 import de.fraunhofer.iosb.ilt.faaast.service.exception.EndpointException;
 import de.fraunhofer.iosb.ilt.faaast.service.model.Interface;
@@ -117,17 +116,18 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
         RequestHandlerServlet handler = new RequestHandlerServlet(this, config, serviceContext);
         context.addServlet(handler, "/*");
 
-        if (Objects.nonNull(config.getJwkProvider())) {
+        if (Objects.nonNull(config.getTrustedListUrl())) {
             URL jwkProviderUrl;
             try {
-                jwkProviderUrl = new URL(config.getJwkProvider());
+                jwkProviderUrl = new URL(config.getTrustedListUrl());
             }
             catch (MalformedURLException malformedJwkProviderUrl) {
                 throw new EndpointException("Could not parse JWK provider URL", malformedJwkProviderUrl);
             }
-            JwkProvider jwkProvider = new UrlJwkProvider(jwkProviderUrl);
+            TrustedListService trustedListService = new TrustedListService(null, jwkProviderUrl);
+            trustedListService.reloadTrustedList();
 
-            context.addFilter(new JwtValidationFilter(jwkProvider),
+            context.addFilter(new JwtValidationFilter(trustedListService),
                     "*", EnumSet.allOf(DispatcherType.class));
         }
         server.setErrorHandler(new HttpErrorHandler(config));
