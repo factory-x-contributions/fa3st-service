@@ -491,7 +491,7 @@ public class QueryEvaluator {
 
 
     /**
-     * recursive check
+     * recursive check.
      */
     private boolean checkSubmodelElementsRecursively(List<SubmodelElement> elements, List<Condition> conditions) {
         if (elements == null || elements.isEmpty()) {
