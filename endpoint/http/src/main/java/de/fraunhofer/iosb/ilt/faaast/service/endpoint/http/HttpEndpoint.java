@@ -26,6 +26,7 @@ import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.security.filter.JwtVa
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.util.HttpHelper;
 import de.fraunhofer.iosb.ilt.faaast.service.exception.EndpointException;
 import de.fraunhofer.iosb.ilt.faaast.service.model.Interface;
+import de.fraunhofer.iosb.ilt.faaast.service.model.Version;
 import de.fraunhofer.iosb.ilt.faaast.service.util.EncodingHelper;
 import jakarta.servlet.DispatcherType;
 import java.io.File;
@@ -68,6 +69,7 @@ import org.slf4j.LoggerFactory;
  */
 public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
 
+    public static final Version API_VERSION = Version.V3_0;
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpEndpoint.class);
     private static final CertificateInformation SELFSIGNED_CERTIFICATE_INFORMATION = CertificateInformation.builder()
             .applicationUri("urn:de:fraunhofer:iosb:ilt:faaast:service:endpoint:http")
@@ -87,6 +89,16 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
     }
 
     private ServletContextHandler context;
+
+    /**
+     * Gets the API version prefix.
+     *
+     * @return the API version prefix
+     */
+    protected static String getVersionPrefix() {
+        return String.format("/api/%s", API_VERSION);
+    }
+
 
     @Override
     public void start() throws EndpointException {
@@ -291,6 +303,9 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
                         .href(endpointUri.toASCIIString())
                         .endpointProtocol(ENDPOINT_PROTOCOL)
                         .endpointProtocolVersion(ENDPOINT_PROTOCOL_VERSION)
+                        .subprotocol(config.getSubprotocol())
+                        .subprotocolBody(render(config.getSubprotocolBody(), identifiableId))
+                        .subprotocolBodyEncoding(config.getSubprotocolBodyEncoding())
                         .securityAttributes(new DefaultSecurityAttributeObject.Builder()
                                 .type(SecurityTypeEnum.NONE)
                                 .key("")
@@ -298,6 +313,14 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
                                 .build())
                         .build())
                 .build();
+    }
+
+
+    private String render(String subprotocolBodyTemplate, String identifiableId) {
+        if (subprotocolBodyTemplate == null) {
+            return null;
+        }
+        return subprotocolBodyTemplate.replace("{}", identifiableId == null ? "" : identifiableId);
     }
 
 
@@ -311,7 +334,7 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
                         result.getUserInfo(),
                         config.getHostname(),
                         result.getPort(),
-                        config.getPathPrefix().concat(result.getPath()),
+                        result.getPath(),
                         result.getQuery(),
                         result.getFragment());
             }
