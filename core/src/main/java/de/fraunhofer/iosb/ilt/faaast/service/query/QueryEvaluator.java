@@ -28,6 +28,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.eclipse.digitaltwin.aas4j.v3.model.AssetAdministrationShell;
 import org.eclipse.digitaltwin.aas4j.v3.model.ConceptDescription;
+import org.eclipse.digitaltwin.aas4j.v3.model.Entity;
 import org.eclipse.digitaltwin.aas4j.v3.model.Extension;
 import org.eclipse.digitaltwin.aas4j.v3.model.Identifiable;
 import org.eclipse.digitaltwin.aas4j.v3.model.Key;
@@ -436,7 +437,7 @@ public class QueryEvaluator {
                     return false;
                 return checkLangStringNameMatch(aas.getDisplayName(), itemConditions);
 
-            // Submodel
+            // SM
             case "$sm#extensions":
                 if (!(identifiable instanceof Submodel sm))
                     return false;
@@ -459,19 +460,11 @@ public class QueryEvaluator {
                     return false;
                 return checkKeysMatch(sm.getSemanticId().getKeys(), itemConditions);
 
-            // SME
             case PREFIX_SME:
                 if (!(identifiable instanceof Submodel sm))
                     return false;
-                List<SubmodelElement> topLevel = sm.getSubmodelElements();
-                if (topLevel == null)
-                    return false;
-                for (SubmodelElement item: topLevel) {
-                    if (doAllItemConditionsMatch(itemConditions, cond -> getPropertyValuesFromSuffix(item, cond.suffix))) {
-                        return true;
-                    }
-                }
-                return false;
+
+                return checkSubmodelElementsRecursively(sm.getSubmodelElements(), itemConditions);
 
             default:
                 if (commonPrefix.startsWith(PREFIX_SME + ".")) {
@@ -494,6 +487,42 @@ public class QueryEvaluator {
                 LOGGER.error("Unsupported prefix for $match: {}", commonPrefix);
                 return false;
         }
+    }
+
+
+    /**
+     * recursive check
+     */
+    private boolean checkSubmodelElementsRecursively(List<SubmodelElement> elements, List<Condition> conditions) {
+        if (elements == null || elements.isEmpty()) {
+            return false;
+        }
+
+        for (SubmodelElement item: elements) {
+            // actual element
+            if (doAllItemConditionsMatch(conditions, cond -> getPropertyValuesFromSuffix(item, cond.suffix))) {
+                return true;
+            }
+
+            // child
+            if (item instanceof SubmodelElementCollection) {
+                if (checkSubmodelElementsRecursively(((SubmodelElementCollection) item).getValue(), conditions)) {
+                    return true;
+                }
+            }
+            else if (item instanceof SubmodelElementList) {
+                if (checkSubmodelElementsRecursively(((SubmodelElementList) item).getValue(), conditions)) {
+                    return true;
+                }
+            }
+            else if (item instanceof Entity) {
+                // entities
+                if (checkSubmodelElementsRecursively(((Entity) item).getStatements(), conditions)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
 
@@ -662,18 +691,14 @@ public class QueryEvaluator {
 
             List<Object> values = new ArrayList<>();
             if (!pathPart.isEmpty()) {
+                // Pfad-basierter Zugriff (bleibt gleich)
                 SubmodelElement sme = getSubmodelElementByPath(sm, pathPart);
                 if (sme != null) {
                     values.addAll(getSubmodelElementAttributeValues(sme, attr));
                 }
             }
             else {
-                List<SubmodelElement> smes = sm.getSubmodelElements();
-                if (smes != null) {
-                    for (SubmodelElement sme: smes) {
-                        values.addAll(getSubmodelElementAttributeValues(sme, attr));
-                    }
-                }
+                collectValuesRecursively(sm.getSubmodelElements(), attr, values);
             }
             return values;
         }
@@ -685,6 +710,7 @@ public class QueryEvaluator {
             return switch (attr) {
                 case "idShort" -> Collections.singletonList(cd.getIdShort());
                 case "id" -> Collections.singletonList(cd.getId());
+                case "modelType" -> Collections.singletonList("ConceptDescription");
                 case "displayName" ->
                     cd.getDisplayName() != null ? cd.getDisplayName().stream().map(LangStringNameType::getText).collect(Collectors.toList()) : Collections.emptyList();
                 case "description" ->
@@ -701,12 +727,33 @@ public class QueryEvaluator {
     }
 
 
+    private void collectValuesRecursively(List<SubmodelElement> elements, String attr, List<Object> collector) {
+        if (elements == null || elements.isEmpty()) {
+            return;
+        }
+        for (SubmodelElement sme: elements) {
+            collector.addAll(getSubmodelElementAttributeValues(sme, attr));
+            if (sme instanceof SubmodelElementCollection) {
+                collectValuesRecursively(((SubmodelElementCollection) sme).getValue(), attr, collector);
+            }
+            else if (sme instanceof SubmodelElementList) {
+                collectValuesRecursively(((SubmodelElementList) sme).getValue(), attr, collector);
+            }
+            else if (sme instanceof Entity) {
+                collectValuesRecursively(((Entity) sme).getStatements(), attr, collector);
+            }
+        }
+    }
+
+
     private List<Object> getAasFieldValues(AssetAdministrationShell aas, String attr) {
         switch (attr) {
             case "idShort":
                 return Collections.singletonList(aas.getIdShort());
             case "id":
                 return Collections.singletonList(aas.getId());
+            case "modelType":
+                return Collections.singletonList("AssetAdministrationShell");
             case "assetInformation.assetKind":
                 return (aas.getAssetInformation() == null || aas.getAssetInformation().getAssetKind() == null)
                         ? Collections.emptyList()
@@ -727,6 +774,14 @@ public class QueryEvaluator {
             case "displayName":
                 return aas.getDisplayName() != null
                         ? aas.getDisplayName().stream().map(LangStringNameType::getText).collect(Collectors.toList())
+                        : Collections.emptyList();
+            case "administration.version":
+                return (aas.getAdministration() != null && aas.getAdministration().getVersion() != null)
+                        ? Collections.singletonList(aas.getAdministration().getVersion())
+                        : Collections.emptyList();
+            case "administration.revision":
+                return (aas.getAdministration() != null && aas.getAdministration().getRevision() != null)
+                        ? Collections.singletonList(aas.getAdministration().getRevision())
                         : Collections.emptyList();
             default:
                 if (attr.startsWith("assetInformation.specificAssetIds")) {
@@ -757,11 +812,19 @@ public class QueryEvaluator {
                 return Collections.singletonList(sm.getId());
             case "kind":
                 return sm.getKind() != null ? Collections.singletonList(sm.getKind().name()) : Collections.emptyList();
+            case "modelType":
+                return Collections.singletonList("Submodel");
             case "semanticId": {
                 Reference ref = sm.getSemanticId();
                 if (ref == null || ref.getKeys() == null || ref.getKeys().isEmpty())
                     return Collections.emptyList();
                 return Collections.singletonList(ref.getKeys().get(0).getValue());
+            }
+            case "semanticId.type": {
+                Reference ref = sm.getSemanticId();
+                if (ref == null || ref.getType() == null)
+                    return Collections.emptyList();
+                return Collections.singletonList(ref.getType().name());
             }
             case "description":
                 return sm.getDescription() != null
@@ -770,6 +833,14 @@ public class QueryEvaluator {
             case "displayName":
                 return sm.getDisplayName() != null
                         ? sm.getDisplayName().stream().map(LangStringNameType::getText).collect(Collectors.toList())
+                        : Collections.emptyList();
+            case "administration.version":
+                return (sm.getAdministration() != null && sm.getAdministration().getVersion() != null)
+                        ? Collections.singletonList(sm.getAdministration().getVersion())
+                        : Collections.emptyList();
+            case "administration.revision":
+                return (sm.getAdministration() != null && sm.getAdministration().getRevision() != null)
+                        ? Collections.singletonList(sm.getAdministration().getRevision())
                         : Collections.emptyList();
             default:
                 if (attr.startsWith("semanticId.keys")) {
@@ -824,6 +895,12 @@ public class QueryEvaluator {
                 if (ref == null || ref.getKeys() == null || ref.getKeys().isEmpty())
                     return Collections.emptyList();
                 return Collections.singletonList(ref.getKeys().get(0).getValue());
+            }
+            case "semanticId.type": {
+                Reference ref = sme.getSemanticId();
+                if (ref == null || ref.getType() == null)
+                    return Collections.emptyList();
+                return Collections.singletonList(ref.getType().name());
             }
             case "description":
                 return sme.getDescription() != null

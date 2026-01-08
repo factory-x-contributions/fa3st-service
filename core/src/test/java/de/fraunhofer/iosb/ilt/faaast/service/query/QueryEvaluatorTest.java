@@ -612,4 +612,35 @@ public class QueryEvaluatorTest {
         assertTrue(result);
     }
 
+
+    @Test
+    public void nestedMatches() throws Exception {
+        String json = """
+                {"$condition":{"$and":[{"$eq":[{"$field":"$sm#idShort"},{"$strVal":"TechnicalData"}]},{"$eq":[{"$field":"$sme#idShort"},{"$strVal":"ProductClassifications"}]},{"$eq":[{"$field":"$sme#idShort"},{"$strVal":"ProductClassId"}]}]}}
+                 """;
+        String json2 = """
+                {"$condition":{"$and":[{"$eq":[{"$field":"$sme#idShort"},{"$strVal":"ProductClassId"}]}]}}
+                 """;
+        String json3 = """
+                {"$condition":{"$and":[{"$eq":[{"$field":"$sm#idShort"},{"$strVal":"TechnicalData"}]},{"$eq":[{"$field":"$sme#value"},{"$strVal":"27-37-09-05"}]}]}}
+                 """;
+
+        Query query = MAPPER.readValue(
+                json, new TypeReference<>() {});
+        Query query2 = MAPPER.readValue(
+                json, new TypeReference<>() {});
+        Query query3 = MAPPER.readValue(
+                json, new TypeReference<>() {});
+
+        Environment env = createTestEnvironmentForAndMatch(true);
+        QueryEvaluator evaluator = new QueryEvaluator();
+        Submodel submodel = env.getSubmodels().get(0);
+        boolean result = evaluator.matches(query.get$condition(), submodel);
+        boolean result2 = evaluator.matches(query2.get$condition(), submodel);
+        boolean result3 = evaluator.matches(query3.get$condition(), submodel);
+        assertTrue(result);
+        assertTrue(result2);
+        assertTrue(result3);
+    }
+
 }
