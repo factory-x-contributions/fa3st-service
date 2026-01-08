@@ -612,6 +612,22 @@ public class QueryEvaluatorTest {
         assertTrue(result);
     }
 
+    @Test
+    public void regexTest() throws Exception {
+        String json = """
+                {"$condition":{"$and":[{"$regex":[{"$field":"$sm#idShort"},{"$strVal":".*"}]}]}}
+                 """;
+
+        Query query = MAPPER.readValue(
+                json, new TypeReference<>() {});
+
+        Environment env = createTestEnvironmentForDescriptionMatch(true);
+        QueryEvaluator evaluator = new QueryEvaluator();
+        Submodel submodel = env.getSubmodels().get(0);
+        boolean result = evaluator.matches(query.get$condition(), submodel);
+        assertTrue(result);
+    }
+
 
     @Test
     public void nestedMatches() throws Exception {
