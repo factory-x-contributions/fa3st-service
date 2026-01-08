@@ -59,6 +59,11 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     private int port;
     private boolean sniEnabled;
     private boolean sslEnabled;
+    private String subprotocol;
+    private String subprotocolBody;
+    private String subprotocolBodyEncoding;
+    private String shellCallbackAddress;
+    private String submodelCallbackAddress;
     private String jwkProvider;
     private String aclFolder;
 
@@ -73,7 +78,9 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
         corsExposedHeaders = DEFAULT_CORS_EXPOSED_HEADERS;
         corsMaxAge = DEFAULT_CORS_MAX_AGE;
         hostname = DEFAULT_HOSTNAME;
-        pathPrefix = DEFAULT_PATH_PREFIX;
+        shellCallbackAddress = DEFAULT_CALLBACK_ADDRESS;
+        submodelCallbackAddress = DEFAULT_CALLBACK_ADDRESS;
+        subprotocolBodyEncoding = DEFAULT_SUBPROTOCOL_BODY_ENCODING;
         includeErrorDetails = DEFAULT_INCLUDE_ERROR_DETAILS;
         port = DEFAULT_PORT;
         sniEnabled = DEFAULT_SNI_ENABLED;
@@ -171,19 +178,23 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     }
 
 
-    public String getPathPrefix() {
-        return pathPrefix;
+    public String getShellCallbackAddress() {
+        return shellCallbackAddress;
     }
 
 
-    /**
-     * Sets the path prefix of this endpoint. The path prefix must start with a "/" and not end with a "/".
-     *
-     * @param pathPrefix The path prefix used for HTTP requests to this endpoint.
-     */
-    public void setPathPrefix(String pathPrefix) {
-        validatePathPrefix(pathPrefix);
-        this.pathPrefix = pathPrefix;
+    public void setShellCallbackAddress(String shellCallbackAddress) {
+        this.shellCallbackAddress = shellCallbackAddress;
+    }
+
+
+    public String getSubmodelCallbackAddress() {
+        return submodelCallbackAddress;
+    }
+
+
+    public void setSubmodelCallbackAddress(String submodelCallbackAddress) {
+        this.submodelCallbackAddress = submodelCallbackAddress;
     }
 
 
@@ -266,7 +277,8 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
                 && Objects.equals(corsExposedHeaders, that.corsExposedHeaders)
                 && Objects.equals(corsMaxAge, that.corsMaxAge)
                 && Objects.equals(hostname, that.hostname)
-                && Objects.equals(pathPrefix, that.pathPrefix)
+                && Objects.equals(shellCallbackAddress, that.shellCallbackAddress)
+                && Objects.equals(submodelCallbackAddress, that.submodelCallbackAddress)
                 && Objects.equals(includeErrorDetails, that.includeErrorDetails)
                 && Objects.equals(port, that.port)
                 && Objects.equals(sniEnabled, that.sniEnabled)
@@ -292,7 +304,8 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
                 corsExposedHeaders,
                 corsMaxAge,
                 hostname,
-                pathPrefix,
+                shellCallbackAddress,
+                submodelCallbackAddress,
                 includeErrorDetails,
                 port,
                 sniEnabled,
@@ -376,8 +389,14 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
         }
 
 
-        public B jwkProvider(String value) {
-            getBuildingInstance().setJwkProvider(value);
+        public B shellCallbackAddress(String shellCallbackAddress) {
+            getBuildingInstance().setShellCallbackAddress(shellCallbackAddress);
+            return getSelf();
+        }
+
+
+        public B submodelCallbackAddress(String submodelCallbackAddress) {
+            getBuildingInstance().setSubmodelCallbackAddress(submodelCallbackAddress);
             return getSelf();
         }
 
