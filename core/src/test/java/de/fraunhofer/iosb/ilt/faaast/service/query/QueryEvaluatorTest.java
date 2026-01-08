@@ -612,6 +612,7 @@ public class QueryEvaluatorTest {
         assertTrue(result);
     }
 
+
     @Test
     public void regexTest() throws Exception {
         String json = """
