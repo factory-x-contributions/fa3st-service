@@ -210,6 +210,45 @@ public class QueryEvaluatorTest {
     }
 
 
+    private Environment createTestEnvironmentForDescriptionMatch(boolean matching) {
+        List<SubmodelElement> productClassItems = new ArrayList<>();
+        Property productClassId = new DefaultProperty.Builder()
+                .idShort("ProductClassId")
+                .value(matching ? "27-37-09-05" : "NonMatching")
+                .valueType(DataTypeDefXsd.STRING)
+                .build();
+        productClassItems.add(productClassId);
+
+        SubmodelElementList productClassifications = new DefaultSubmodelElementList.Builder()
+                .idShort("ProductClassifications")
+                .value(productClassItems)
+                .build();
+
+        Submodel submodel = new DefaultSubmodel.Builder()
+                .id("https://example.com/submodel/3")
+                .idShort("TechnicalData")
+                .description(new DefaultLangStringTextType.Builder()
+                        .text("english text")
+                        .language("en")
+                        .build())
+                .submodelElements(productClassifications)
+                .build();
+
+        AssetAdministrationShell aas = new DefaultAssetAdministrationShell.Builder()
+                .id("https://example.com/aas/3")
+                .idShort("TestAAS")
+                .assetInformation(new DefaultAssetInformation.Builder()
+                        .assetKind(AssetKind.INSTANCE)
+                        .build())
+                .build();
+
+        return new DefaultEnvironment.Builder()
+                .assetAdministrationShells(aas)
+                .submodels(submodel)
+                .build();
+    }
+
+
     /* ------------------------------------------------------------------ */
     @Test
     public void simpleEq_withMatchingFields() throws Exception {
@@ -505,7 +544,6 @@ public class QueryEvaluatorTest {
     }
 
 
-    /* ------------------------------------------------------------------ */
     @Test
     public void orMatch_withNonMatchingSpecificAssetIds() throws Exception {
         String json = """
@@ -555,6 +593,23 @@ public class QueryEvaluatorTest {
         AssetAdministrationShell aas = env.getAssetAdministrationShells().get(0);
         boolean result = evaluator.matches(query.get$condition(), aas);
         assertFalse(result);
+    }
+
+
+    @Test
+    public void matchInArray() throws Exception {
+        String json = """
+                {"$condition":{"$match":[{"$eq":[{"$field":"$sm#description[].language"},{"$strVal":"en"}]}]}}
+                 """;
+
+        Query query = MAPPER.readValue(
+                json, new TypeReference<>() {});
+
+        Environment env = createTestEnvironmentForDescriptionMatch(true);
+        QueryEvaluator evaluator = new QueryEvaluator();
+        Submodel submodel = env.getSubmodels().get(0);
+        boolean result = evaluator.matches(query.get$condition(), submodel);
+        assertTrue(result);
     }
 
 }

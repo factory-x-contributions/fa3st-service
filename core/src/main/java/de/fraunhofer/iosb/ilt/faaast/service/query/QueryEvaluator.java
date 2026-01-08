@@ -28,8 +28,10 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.eclipse.digitaltwin.aas4j.v3.model.AssetAdministrationShell;
 import org.eclipse.digitaltwin.aas4j.v3.model.ConceptDescription;
+import org.eclipse.digitaltwin.aas4j.v3.model.Extension;
 import org.eclipse.digitaltwin.aas4j.v3.model.Identifiable;
 import org.eclipse.digitaltwin.aas4j.v3.model.Key;
+import org.eclipse.digitaltwin.aas4j.v3.model.LangStringNameType;
 import org.eclipse.digitaltwin.aas4j.v3.model.LangStringTextType;
 import org.eclipse.digitaltwin.aas4j.v3.model.MultiLanguageProperty;
 import org.eclipse.digitaltwin.aas4j.v3.model.Property;
@@ -99,7 +101,7 @@ public class QueryEvaluator {
      * @param expr logical expression (tree)
      * @param identifiable AAS | Submodel | ConceptDescription
      * @return true if expression matches the identifiable
-     * 
+     *
      */
     public boolean matches(LogicalExpression expr, Identifiable identifiable) {
         if (expr == null || identifiable == null) {
@@ -404,29 +406,66 @@ public class QueryEvaluator {
 
     private boolean evaluateListMatch(String commonPrefix, List<Condition> itemConditions, Identifiable identifiable) {
         switch (commonPrefix) {
+            // AAS
             case "$aas#assetInformation.specificAssetIds":
                 if (!(identifiable instanceof AssetAdministrationShell aas))
                     return false;
                 if (aas.getAssetInformation() == null || aas.getAssetInformation().getSpecificAssetIds() == null)
                     return false;
-
                 for (SpecificAssetId item: aas.getAssetInformation().getSpecificAssetIds()) {
                     if (doAllItemConditionsMatch(itemConditions, cond -> {
                         String s = getSpecificAssetIdAttribute(item, cond.suffix);
                         return s == null ? Collections.emptyList() : Collections.singletonList(s);
-                    })) {
+                    }))
                         return true;
-                    }
                 }
                 return false;
 
+            case "$aas#extensions":
+                if (!(identifiable instanceof AssetAdministrationShell aas))
+                    return false;
+                return checkExtensionsMatch(aas.getExtensions(), itemConditions);
+
+            case "$aas#description":
+                if (!(identifiable instanceof AssetAdministrationShell aas))
+                    return false;
+                return checkLangStringTextMatch(aas.getDescription(), itemConditions);
+
+            case "$aas#displayName":
+                if (!(identifiable instanceof AssetAdministrationShell aas))
+                    return false;
+                return checkLangStringNameMatch(aas.getDisplayName(), itemConditions);
+
+            // Submodel
+            case "$sm#extensions":
+                if (!(identifiable instanceof Submodel sm))
+                    return false;
+                return checkExtensionsMatch(sm.getExtensions(), itemConditions);
+
+            case "$sm#description":
+                if (!(identifiable instanceof Submodel sm))
+                    return false;
+                return checkLangStringTextMatch(sm.getDescription(), itemConditions);
+
+            case "$sm#displayName":
+                if (!(identifiable instanceof Submodel sm))
+                    return false;
+                return checkLangStringNameMatch(sm.getDisplayName(), itemConditions);
+
+            case "$sm#semanticId.keys":
+                if (!(identifiable instanceof Submodel sm))
+                    return false;
+                if (sm.getSemanticId() == null)
+                    return false;
+                return checkKeysMatch(sm.getSemanticId().getKeys(), itemConditions);
+
+            // SME
             case PREFIX_SME:
                 if (!(identifiable instanceof Submodel sm))
                     return false;
                 List<SubmodelElement> topLevel = sm.getSubmodelElements();
                 if (topLevel == null)
                     return false;
-
                 for (SubmodelElement item: topLevel) {
                     if (doAllItemConditionsMatch(itemConditions, cond -> getPropertyValuesFromSuffix(item, cond.suffix))) {
                         return true;
@@ -442,11 +481,9 @@ public class QueryEvaluator {
                     SubmodelElement listElem = getSubmodelElementByPath(sm2, path);
                     if (!(listElem instanceof SubmodelElementList))
                         return false;
-
                     List<SubmodelElement> items = ((SubmodelElementList) listElem).getValue();
                     if (items == null)
                         return false;
-
                     for (SubmodelElement item: items) {
                         if (doAllItemConditionsMatch(itemConditions, cond -> getPropertyValuesFromSuffix(item, cond.suffix))) {
                             return true;
@@ -457,6 +494,107 @@ public class QueryEvaluator {
                 LOGGER.error("Unsupported prefix for $match: {}", commonPrefix);
                 return false;
         }
+    }
+
+
+    private boolean checkExtensionsMatch(List<Extension> extensions, List<Condition> conditions) {
+        if (extensions == null)
+            return false;
+        for (Extension ext: extensions) {
+            if (doAllItemConditionsMatch(conditions, cond -> {
+                String val = getExtensionAttribute(ext, cond.suffix);
+                return val == null ? Collections.emptyList() : Collections.singletonList(val);
+            }))
+                return true;
+        }
+        return false;
+    }
+
+
+    private boolean checkLangStringTextMatch(List<LangStringTextType> list, List<Condition> conditions) {
+        if (list == null)
+            return false;
+        for (LangStringTextType item: list) {
+            if (doAllItemConditionsMatch(conditions, cond -> {
+                String val = getLangStringTextAttribute(item, cond.suffix);
+                return val == null ? Collections.emptyList() : Collections.singletonList(val);
+            }))
+                return true;
+        }
+        return false;
+    }
+
+
+    private boolean checkLangStringNameMatch(List<LangStringNameType> list, List<Condition> conditions) {
+        if (list == null)
+            return false;
+        for (LangStringNameType item: list) {
+            if (doAllItemConditionsMatch(conditions, cond -> {
+                String val = getLangStringNameAttribute(item, cond.suffix);
+                return val == null ? Collections.emptyList() : Collections.singletonList(val);
+            }))
+                return true;
+        }
+        return false;
+    }
+
+
+    private boolean checkKeysMatch(List<Key> keys, List<Condition> conditions) {
+        if (keys == null)
+            return false;
+        for (Key key: keys) {
+            if (doAllItemConditionsMatch(conditions, cond -> {
+                String val = getKeyAttribute(key, cond.suffix);
+                return val == null ? Collections.emptyList() : Collections.singletonList(val);
+            }))
+                return true;
+        }
+        return false;
+    }
+
+
+    private String getExtensionAttribute(Extension ext, String suffix) {
+        // suffix e.g. "name" or ".name"
+        String s = suffix.startsWith(".") ? suffix.substring(1) : suffix;
+        return switch (s) {
+            case "name" -> ext.getName();
+            case "value" -> ext.getValue();
+            case "valueType" -> ext.getValueType() != null ? ext.getValueType().name() : null;
+            case "semanticId" -> ext.getSemanticId() != null && !ext.getSemanticId().getKeys().isEmpty()
+                    ? ext.getSemanticId().getKeys().get(0).getValue()
+                    : null;
+            default -> null;
+        };
+    }
+
+
+    private String getLangStringTextAttribute(LangStringTextType ls, String suffix) {
+        String s = suffix.startsWith(".") ? suffix.substring(1) : suffix;
+        return switch (s) {
+            case "language" -> ls.getLanguage();
+            case "text" -> ls.getText();
+            default -> null;
+        };
+    }
+
+
+    private String getLangStringNameAttribute(LangStringNameType ls, String suffix) {
+        String s = suffix.startsWith(".") ? suffix.substring(1) : suffix;
+        return switch (s) {
+            case "language" -> ls.getLanguage();
+            case "text" -> ls.getText();
+            default -> null;
+        };
+    }
+
+
+    private String getKeyAttribute(Key key, String suffix) {
+        String s = suffix.startsWith(".") ? suffix.substring(1) : suffix;
+        return switch (s) {
+            case "value" -> key.getValue();
+            case "type" -> key.getType() != null ? key.getType().name() : null;
+            default -> null;
+        };
     }
 
 
@@ -513,6 +651,8 @@ public class QueryEvaluator {
             String attr;
             if (field.contains(".")) {
                 int hashPos = field.indexOf("#", field.indexOf("."));
+                if (hashPos == -1)
+                    return Collections.emptyList();
                 pathPart = field.substring(field.indexOf(".") + 1, hashPos);
                 attr = field.substring(hashPos + 1);
             }
@@ -545,6 +685,10 @@ public class QueryEvaluator {
             return switch (attr) {
                 case "idShort" -> Collections.singletonList(cd.getIdShort());
                 case "id" -> Collections.singletonList(cd.getId());
+                case "displayName" ->
+                    cd.getDisplayName() != null ? cd.getDisplayName().stream().map(LangStringNameType::getText).collect(Collectors.toList()) : Collections.emptyList();
+                case "description" ->
+                    cd.getDescription() != null ? cd.getDescription().stream().map(LangStringTextType::getText).collect(Collectors.toList()) : Collections.emptyList();
                 default -> {
                     LOGGER.error("Unsupported CD attribute: {}", attr);
                     yield Collections.emptyList();
@@ -576,6 +720,14 @@ public class QueryEvaluator {
                     return Collections.emptyList();
                 String globalAssetId = aas.getAssetInformation().getGlobalAssetId();
                 return globalAssetId == null ? Collections.emptyList() : Collections.singletonList(globalAssetId);
+            case "description": // Flattened list for simple comparisons
+                return aas.getDescription() != null
+                        ? aas.getDescription().stream().map(LangStringTextType::getText).collect(Collectors.toList())
+                        : Collections.emptyList();
+            case "displayName":
+                return aas.getDisplayName() != null
+                        ? aas.getDisplayName().stream().map(LangStringNameType::getText).collect(Collectors.toList())
+                        : Collections.emptyList();
             default:
                 if (attr.startsWith("assetInformation.specificAssetIds")) {
                     if (aas.getAssetInformation() == null || aas.getAssetInformation().getSpecificAssetIds() == null) {
@@ -603,12 +755,22 @@ public class QueryEvaluator {
                 return Collections.singletonList(sm.getIdShort());
             case "id":
                 return Collections.singletonList(sm.getId());
+            case "kind":
+                return sm.getKind() != null ? Collections.singletonList(sm.getKind().name()) : Collections.emptyList();
             case "semanticId": {
                 Reference ref = sm.getSemanticId();
                 if (ref == null || ref.getKeys() == null || ref.getKeys().isEmpty())
                     return Collections.emptyList();
                 return Collections.singletonList(ref.getKeys().get(0).getValue());
             }
+            case "description":
+                return sm.getDescription() != null
+                        ? sm.getDescription().stream().map(LangStringTextType::getText).collect(Collectors.toList())
+                        : Collections.emptyList();
+            case "displayName":
+                return sm.getDisplayName() != null
+                        ? sm.getDisplayName().stream().map(LangStringNameType::getText).collect(Collectors.toList())
+                        : Collections.emptyList();
             default:
                 if (attr.startsWith("semanticId.keys")) {
                     Reference ref = sm.getSemanticId();
@@ -644,6 +806,8 @@ public class QueryEvaluator {
                     return Collections.singletonList(((Property) sme).getValueType().name());
                 }
                 return Collections.emptyList();
+            case "category":
+                return sme.getCategory() != null ? Collections.singletonList(sme.getCategory()) : Collections.emptyList();
             case "language":
                 if (sme instanceof MultiLanguageProperty) {
                     List<LangStringTextType> values = ((MultiLanguageProperty) sme).getValue();
@@ -661,6 +825,14 @@ public class QueryEvaluator {
                     return Collections.emptyList();
                 return Collections.singletonList(ref.getKeys().get(0).getValue());
             }
+            case "description":
+                return sme.getDescription() != null
+                        ? sme.getDescription().stream().map(LangStringTextType::getText).collect(Collectors.toList())
+                        : Collections.emptyList();
+            case "displayName":
+                return sme.getDisplayName() != null
+                        ? sme.getDisplayName().stream().map(LangStringNameType::getText).collect(Collectors.toList())
+                        : Collections.emptyList();
             default:
                 if (attr.startsWith("semanticId.keys")) {
                     Reference ref = sme.getSemanticId();
