@@ -22,16 +22,21 @@ import static org.mockito.Mockito.when;
 
 import com.auth0.jwk.Jwk;
 import com.auth0.jwk.JwkProvider;
-import com.auth0.jwk.UrlJwkProvider;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.security.trustList.OpenIdMetadataService;
+import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.security.trustList.TrustedListService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.lang.reflect.Field;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
+import java.util.concurrent.ConcurrentMap;
 import org.junit.Test;
 
 
@@ -45,34 +50,66 @@ public class JwtValidationFilterTest extends JwtAuthorizationFilterTest {
         kpg.initialize(2048);
         KeyPair kp = kpg.generateKeyPair();
 
-        RSAPublicKey pub = (RSAPublicKey) kp.getPublic();
-        RSAPrivateKey priv = (RSAPrivateKey) kp.getPrivate();
+        RSAPublicKey publicKey = (RSAPublicKey) kp.getPublic();
+        RSAPrivateKey privateKey = (RSAPrivateKey) kp.getPrivate();
 
         String kid = "unit-test-kid";
+        String issuer = "https://someIssuer.com";
+        String fakeJwksUri = "https://fake.jwks.example.com"; // Arbitrary URI used for provider caching
 
+        // Create signed JWT
         String jwt = JWT.create()
                 .withKeyId(kid)
-                .sign(Algorithm.RSA256(pub, priv));
+                .withIssuer(issuer)
+                .sign(Algorithm.RSA256(publicKey, privateKey));
 
+        // Mock JWK
         Jwk jwk = mock(Jwk.class);
-        when(jwk.getPublicKey()).thenReturn(pub);
+        when(jwk.getPublicKey()).thenReturn(publicKey);
         when(jwk.getId()).thenReturn(kid);
 
-        JwkProvider mockJwkProvider = mock(UrlJwkProvider.class);
-
+        // Mock JwkProvider
+        JwkProvider mockJwkProvider = mock(JwkProvider.class);
         when(mockJwkProvider.get(kid)).thenReturn(jwk);
 
-        filter = new JwtValidationFilter(mockJwkProvider);
+        // Mock dependencies
+        TrustedListService trustedListService = mock(TrustedListService.class);
+        when(trustedListService.isTrustedIssuer(issuer)).thenReturn(true);
 
+        OpenIdMetadataService metadataService = mock(OpenIdMetadataService.class);
+        when(metadataService.getJwksUriForIssuer(issuer)).thenReturn(fakeJwksUri);
+
+        // Create the filter normally
+        JwtValidationFilter filter = new JwtValidationFilter(trustedListService);
+
+        Field metadataField = JwtValidationFilter.class.getDeclaredField("metadataService");
+        metadataField.setAccessible(true);
+        metadataField.set(filter, metadataService);
+
+        Field jwkProvidersField = JwtValidationFilter.class.getDeclaredField("jwkProviders");
+        jwkProvidersField.setAccessible(true);
+        ConcurrentMap<String, JwkProvider> jwkProviders = (ConcurrentMap<String, JwkProvider>) jwkProvidersField.get(filter);
+        jwkProviders.put(fakeJwksUri, mockJwkProvider);
+
+        // Setup request/response/chain mocks (assuming mockRequest, mockResponse, mockFilterChain from parent)
         HttpServletRequest request = mockRequest("GET", "/api/v3.0/submodels", jwt);
         HttpServletResponse response = mockResponse();
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter writer = new PrintWriter(stringWriter);
+        when(response.getWriter()).thenReturn(writer);
+
         FilterChain filterChain = mockFilterChain();
 
+        // Execute filter
         filter.doFilter(request, response, filterChain);
 
-        // The filter passed this request onto the next filter -> Did not block
+        // Assertions: filter chain proceeded (valid JWT)
         verify(filterChain, times(1)).doFilter(any(), any());
-        // The filter called the JWK provider to verify the request
+
+        // Verify metadata was queried
+        verify(metadataService, times(1)).getJwksUriForIssuer(issuer);
+
+        // Verify JWK provider was used
         verify(mockJwkProvider, times(1)).get(kid);
     }
 
