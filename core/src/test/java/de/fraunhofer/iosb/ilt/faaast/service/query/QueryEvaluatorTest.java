@@ -248,6 +248,58 @@ public class QueryEvaluatorTest {
                 .build();
     }
 
+    private Environment createTestEnvironmentForContainsMatch(boolean matching) {
+        List<SubmodelElement> capabilities = new ArrayList<>();
+        List<SubmodelElement> values = new ArrayList<>();
+        Property language = new DefaultProperty.Builder()
+                .idShort("language")
+                .value(matching ? "EN" : "NonMatching")
+                .valueType(DataTypeDefXsd.STRING)
+                .build();
+        capabilities.add(language);
+
+        Property value = new DefaultProperty.Builder()
+                .idShort("value")
+                .value(matching ? "On demand manufacturer" : "NonMatching")
+                .valueType(DataTypeDefXsd.STRING)
+                .build();
+        values.add(value);
+
+        SubmodelElementList capabilitiesList = new DefaultSubmodelElementList.Builder()
+                .idShort("capabilities")
+                .value(capabilities)
+                .build();
+
+        SubmodelElementList valuesList = new DefaultSubmodelElementList.Builder()
+                .idShort("values")
+                .value(values)
+                .build();
+
+        Submodel submodel = new DefaultSubmodel.Builder()
+                .id("https://example.com/submodel/3")
+                .idShort("TechnicalData")
+                .description(new DefaultLangStringTextType.Builder()
+                        .text("english text")
+                        .language("en")
+                        .build())
+                .submodelElements(capabilitiesList)
+                .submodelElements(valuesList)
+                .build();
+
+        AssetAdministrationShell aas = new DefaultAssetAdministrationShell.Builder()
+                .id("https://example.com/aas/3")
+                .idShort("TestAAS")
+                .assetInformation(new DefaultAssetInformation.Builder()
+                        .assetKind(AssetKind.INSTANCE)
+                        .build())
+                .build();
+
+        return new DefaultEnvironment.Builder()
+                .assetAdministrationShells(aas)
+                .submodels(submodel)
+                .build();
+    }
+
 
     /* ------------------------------------------------------------------ */
     @Test
@@ -612,6 +664,37 @@ public class QueryEvaluatorTest {
         assertTrue(result);
     }
 
+    @Test
+    public void containsInList() throws Exception {
+        String json = """
+                {
+                  "$condition": {
+                    "$and": [
+                      { "$contains": [
+                          { "$field": "$sme.capabilities[].language#value" },
+                          { "$strVal": "EN" }
+                        ]
+                      },
+                      { "$contains": [
+                          { "$field": "$sm.capabilities[].values[]#value" },
+                          { "$strVal": "On demand manufacturer" }
+                        ]
+                      }
+                    ]
+                  }
+                }
+                """;
+        Query query = MAPPER.readValue(
+                json, new TypeReference<>() {});
+
+        Environment env = createTestEnvironmentForContainsMatch(true);
+        QueryEvaluator evaluator = new QueryEvaluator();
+        Submodel submodel = env.getSubmodels().get(0);
+        boolean result = evaluator.matches(query.get$condition(), submodel);
+        assertTrue(result);
+
+    }
+
 
     @Test
     public void regexTest() throws Exception {
@@ -645,9 +728,9 @@ public class QueryEvaluatorTest {
         Query query = MAPPER.readValue(
                 json, new TypeReference<>() {});
         Query query2 = MAPPER.readValue(
-                json, new TypeReference<>() {});
+                json2, new TypeReference<>() {});
         Query query3 = MAPPER.readValue(
-                json, new TypeReference<>() {});
+                json3, new TypeReference<>() {});
 
         Environment env = createTestEnvironmentForAndMatch(true);
         QueryEvaluator evaluator = new QueryEvaluator();
