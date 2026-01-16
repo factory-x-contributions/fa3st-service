@@ -248,31 +248,26 @@ public class QueryEvaluatorTest {
                 .build();
     }
 
+
     private Environment createTestEnvironmentForContainsMatch(boolean matching) {
-        List<SubmodelElement> capabilities = new ArrayList<>();
-        List<SubmodelElement> values = new ArrayList<>();
+        List<SubmodelElement> capabilitiesValues = new ArrayList<>();
         Property language = new DefaultProperty.Builder()
                 .idShort("language")
                 .value(matching ? "EN" : "NonMatching")
                 .valueType(DataTypeDefXsd.STRING)
                 .build();
-        capabilities.add(language);
+        capabilitiesValues.add(language);
 
         Property value = new DefaultProperty.Builder()
                 .idShort("value")
                 .value(matching ? "On demand manufacturer" : "NonMatching")
                 .valueType(DataTypeDefXsd.STRING)
                 .build();
-        values.add(value);
+        capabilitiesValues.add(value);
 
-        SubmodelElementList capabilitiesList = new DefaultSubmodelElementList.Builder()
+        SubmodelElementList capabilities = new DefaultSubmodelElementList.Builder()
                 .idShort("capabilities")
-                .value(capabilities)
-                .build();
-
-        SubmodelElementList valuesList = new DefaultSubmodelElementList.Builder()
-                .idShort("values")
-                .value(values)
+                .value(capabilitiesValues)
                 .build();
 
         Submodel submodel = new DefaultSubmodel.Builder()
@@ -282,8 +277,7 @@ public class QueryEvaluatorTest {
                         .text("english text")
                         .language("en")
                         .build())
-                .submodelElements(capabilitiesList)
-                .submodelElements(valuesList)
+                .submodelElements(capabilities)
                 .build();
 
         AssetAdministrationShell aas = new DefaultAssetAdministrationShell.Builder()
@@ -664,6 +658,7 @@ public class QueryEvaluatorTest {
         assertTrue(result);
     }
 
+
     @Test
     public void containsInList() throws Exception {
         String json = """
@@ -676,7 +671,7 @@ public class QueryEvaluatorTest {
                         ]
                       },
                       { "$contains": [
-                          { "$field": "$sm.capabilities[].values[]#value" },
+                          { "$field": "$sme.capabilities[].value#value" },
                           { "$strVal": "On demand manufacturer" }
                         ]
                       }

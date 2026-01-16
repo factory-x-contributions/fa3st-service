@@ -36,7 +36,6 @@ import de.fraunhofer.iosb.ilt.faaast.service.exception.InvalidConfigurationExcep
 import de.fraunhofer.iosb.ilt.faaast.service.filestorage.FileStorageConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.filestorage.memory.FileStorageInMemoryConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.messagebus.MessageBusConfig;
-import de.fraunhofer.iosb.ilt.faaast.service.messagebus.cloudevents.MessageBusCloudeventsConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.messagebus.internal.MessageBusInternalConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.persistence.PersistenceConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.persistence.memory.PersistenceInMemoryConfig;
