@@ -27,6 +27,8 @@ import org.eclipse.digitaltwin.aas4j.v3.model.AssetKind;
 import org.eclipse.digitaltwin.aas4j.v3.model.DataTypeDefXsd;
 import org.eclipse.digitaltwin.aas4j.v3.model.Environment;
 import org.eclipse.digitaltwin.aas4j.v3.model.KeyTypes;
+import org.eclipse.digitaltwin.aas4j.v3.model.LangStringTextType;
+import org.eclipse.digitaltwin.aas4j.v3.model.MultiLanguageProperty;
 import org.eclipse.digitaltwin.aas4j.v3.model.Property;
 import org.eclipse.digitaltwin.aas4j.v3.model.ReferenceTypes;
 import org.eclipse.digitaltwin.aas4j.v3.model.SpecificAssetId;
@@ -250,24 +252,39 @@ public class QueryEvaluatorTest {
 
 
     private Environment createTestEnvironmentForContainsMatch(boolean matching) {
-        List<SubmodelElement> capabilitiesValues = new ArrayList<>();
+        List<SubmodelElement> valuesItems = new ArrayList<>();
+        Property valueItem = new DefaultProperty.Builder()
+                .idShort("value")
+                .value(matching ? "On demand manufacturer" : "NonMatching")
+                .valueType(DataTypeDefXsd.STRING)
+                .build();
+        valuesItems.add(valueItem);
+
+        SubmodelElementList values = new DefaultSubmodelElementList.Builder()
+                .idShort("values")
+                .value(valuesItems)
+                .build();
+
         Property language = new DefaultProperty.Builder()
                 .idShort("language")
                 .value(matching ? "EN" : "NonMatching")
                 .valueType(DataTypeDefXsd.STRING)
                 .build();
-        capabilitiesValues.add(language);
 
-        Property value = new DefaultProperty.Builder()
-                .idShort("value")
-                .value(matching ? "On demand manufacturer" : "NonMatching")
-                .valueType(DataTypeDefXsd.STRING)
+        List<SubmodelElement> collectionItems = new ArrayList<>();
+        collectionItems.add(language);
+        collectionItems.add(values);
+
+        SubmodelElementCollection collection = new DefaultSubmodelElementCollection.Builder()
+                .value(collectionItems)
                 .build();
-        capabilitiesValues.add(value);
+
+        List<SubmodelElement> capabilitiesItems = new ArrayList<>();
+        capabilitiesItems.add(collection);
 
         SubmodelElementList capabilities = new DefaultSubmodelElementList.Builder()
                 .idShort("capabilities")
-                .value(capabilitiesValues)
+                .value(capabilitiesItems)
                 .build();
 
         Submodel submodel = new DefaultSubmodel.Builder()
@@ -296,17 +313,27 @@ public class QueryEvaluatorTest {
 
 
     private Environment createTestEnvironmentForSoftwareNameplateContainsMatch(boolean matching) {
-        List<SubmodelElement> manufacturerProductDescriptionItems = new ArrayList<>();
-        Property manufacturerProductDescription = new DefaultProperty.Builder()
+        List<LangStringTextType> mlpValues = new ArrayList<>();
+        mlpValues.add(new DefaultLangStringTextType.Builder()
+                .language("en")
+                .text("Simulation software")
+                .build());
+        mlpValues.add(new DefaultLangStringTextType.Builder()
+                .language("de")
+                .text(matching ? "Auslegungssoftware und Elektrisches Antriebssystem" : "Some other description")
+                .build());
+
+        MultiLanguageProperty manufacturerProductDescription = new DefaultMultiLanguageProperty.Builder()
                 .idShort("ManufacturerProductDescription")
-                .value(matching ? "Auslegungssoftware und Elektrisches Antriebssystem" : "Some other description")
-                .valueType(DataTypeDefXsd.STRING)
+                .value(mlpValues)
                 .build();
-        manufacturerProductDescriptionItems.add(manufacturerProductDescription);
+
+        List<SubmodelElement> softwareNameplateTypeItems = new ArrayList<>();
+        softwareNameplateTypeItems.add(manufacturerProductDescription);
 
         SubmodelElementCollection softwareNameplateType = new DefaultSubmodelElementCollection.Builder()
                 .idShort("SoftwareNameplateType")
-                .value(manufacturerProductDescriptionItems)
+                .value(softwareNameplateTypeItems)
                 .build();
 
         Submodel submodel = new DefaultSubmodel.Builder()
@@ -331,15 +358,17 @@ public class QueryEvaluatorTest {
 
 
     private Environment createTestEnvironmentForAssetIdContainsMatch(boolean matching) {
+        List<SubmodelElement> assetIdItems = new ArrayList<>();
         Property assetIdContains = new DefaultProperty.Builder()
                 .idShort("assetIdContains")
                 .value(matching ? "i4d.de/some/path" : "other.domain.com/path")
                 .valueType(DataTypeDefXsd.STRING)
                 .build();
+        assetIdItems.add(assetIdContains);
 
         SubmodelElementCollection assetId = new DefaultSubmodelElementCollection.Builder()
                 .idShort("assetId")
-                .value(assetIdContains)
+                .value(assetIdItems)
                 .build();
 
         Submodel submodel = new DefaultSubmodel.Builder()
@@ -739,7 +768,7 @@ public class QueryEvaluatorTest {
                         ]
                       },
                       { "$contains": [
-                          { "$field": "$sme.capabilities[].value#value" },
+                          { "$field": "$sme.capabilities[].values[]#value" },
                           { "$strVal": "On demand manufacturer" }
                         ]
                       }

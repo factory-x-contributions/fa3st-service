@@ -867,6 +867,18 @@ public class QueryEvaluator {
                 if (sme instanceof Property) {
                     return Collections.singletonList(((Property) sme).getValue());
                 }
+                if (sme instanceof MultiLanguageProperty) {
+                    List<LangStringTextType> values = ((MultiLanguageProperty) sme).getValue();
+                    if (values == null)
+                        return Collections.emptyList();
+                    List<String> result = new ArrayList<>();
+                    for (LangStringTextType lst: values) {
+                        if (lst != null && lst.getText() != null) {
+                            result.add(lst.getText());
+                        }
+                    }
+                    return result;
+                }
                 return Collections.emptyList();
             case "valueType":
                 if (sme instanceof Property && ((Property) sme).getValueType() != null) {
@@ -883,6 +895,17 @@ public class QueryEvaluator {
                     return values.stream()
                             .filter(Objects::nonNull)
                             .map(LangStringTextType::getLanguage)
+                            .collect(Collectors.toList());
+                }
+                return Collections.emptyList();
+            case "text":
+                if (sme instanceof MultiLanguageProperty) {
+                    List<LangStringTextType> values = ((MultiLanguageProperty) sme).getValue();
+                    if (values == null)
+                        return Collections.emptyList();
+                    return values.stream()
+                            .filter(Objects::nonNull)
+                            .map(LangStringTextType::getText)
                             .collect(Collectors.toList());
                 }
                 return Collections.emptyList();
@@ -949,20 +972,29 @@ public class QueryEvaluator {
         if (sm == null || path == null || path.isEmpty())
             return null;
 
-        String[] tokens = path.split("\\.");
+        List<String> tokens = splitPathPreservingArrayNotation(path);
         SubmodelElement current = null;
 
-        for (int i = 0; i < tokens.length; i++) {
-            String token = tokens[i];
+        for (int i = 0; i < tokens.size(); i++) {
+            String token = tokens.get(i);
+            boolean isArrayAccess = token.endsWith("[]");
+            String elementName = isArrayAccess ? token.substring(0, token.length() - 2) : token;
+
             if (i == 0) {
-                current = findByIdShort(sm.getSubmodelElements(), token);
+                current = findByIdShort(sm.getSubmodelElements(), elementName);
             }
             else {
                 if (current instanceof SubmodelElementCollection) {
-                    current = findByIdShort(((SubmodelElementCollection) current).getValue(), token);
+                    current = findByIdShort(((SubmodelElementCollection) current).getValue(), elementName);
                 }
                 else if (current instanceof SubmodelElementList) {
-                    current = findByIdShort(((SubmodelElementList) current).getValue(), token);
+                    List<SubmodelElement> items = ((SubmodelElementList) current).getValue();
+                    if (items != null && !items.isEmpty()) {
+                        current = items.get(0);
+                    }
+                    else {
+                        return null;
+                    }
                 }
                 else {
                     return null;
@@ -972,6 +1004,26 @@ public class QueryEvaluator {
                 return null;
         }
         return current;
+    }
+
+
+    private List<String> splitPathPreservingArrayNotation(String path) {
+        List<String> result = new ArrayList<>();
+        if (path == null || path.isEmpty())
+            return result;
+
+        List<String> parts = Arrays.asList(path.split("\\."));
+        for (String part: parts) {
+            int bracketPos = part.indexOf('[');
+            if (bracketPos > 0) {
+                result.add(part.substring(0, bracketPos));
+                result.add(part.substring(bracketPos));
+            }
+            else {
+                result.add(part);
+            }
+        }
+        return result;
     }
 
 
@@ -1012,11 +1064,19 @@ public class QueryEvaluator {
                         processPathSegments(listItems, segments, segmentIndex + 1, attr, result);
                     }
                 }
+                // If no idShort match, search inside collections
+                if (elem instanceof SubmodelElementCollection) {
+                    processPathSegments(((SubmodelElementCollection) elem).getValue(), segments, segmentIndex, attr, result);
+                }
+                else if (elem instanceof SubmodelElementList) {
+                    processPathSegments(((SubmodelElementList) elem).getValue(), segments, segmentIndex, attr, result);
+                }
             }
         }
         else {
             for (SubmodelElement elem: elements) {
-                if (segment.equals(elem.getIdShort())) {
+                boolean matched = segment.equals(elem.getIdShort());
+                if (matched) {
                     if (isLastSegment) {
                         result.addAll(getSubmodelElementAttributeValues(elem, attr));
                     }
@@ -1025,6 +1085,15 @@ public class QueryEvaluator {
                     }
                     else if (elem instanceof SubmodelElementList) {
                         processPathSegments(((SubmodelElementList) elem).getValue(), segments, segmentIndex + 1, attr, result);
+                    }
+                }
+                // If no idShort match and element is a collection/list, search inside it
+                if (!matched) {
+                    if (elem instanceof SubmodelElementCollection) {
+                        processPathSegments(((SubmodelElementCollection) elem).getValue(), segments, segmentIndex, attr, result);
+                    }
+                    else if (elem instanceof SubmodelElementList) {
+                        processPathSegments(((SubmodelElementList) elem).getValue(), segments, segmentIndex, attr, result);
                     }
                 }
             }
@@ -1114,7 +1183,7 @@ public class QueryEvaluator {
     private boolean compareUsingStringOperator(Object a, Object b, ComparisonOperator operator) {
         if (a == null || b == null)
             return false;
-        String left = String.valueOf(a);
+        String left = extractStringValue(a);
         String right = String.valueOf(b);
 
         return switch (operator) {
@@ -1124,6 +1193,14 @@ public class QueryEvaluator {
             case REGEX -> Pattern.compile(right).matcher(left).matches();
             default -> false;
         };
+    }
+
+
+    private String extractStringValue(Object obj) {
+        if (obj instanceof LangStringTextType) {
+            return ((LangStringTextType) obj).getText();
+        }
+        return String.valueOf(obj);
     }
 
 
