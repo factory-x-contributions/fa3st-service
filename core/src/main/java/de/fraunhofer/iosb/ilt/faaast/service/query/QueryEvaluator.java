@@ -898,17 +898,6 @@ public class QueryEvaluator {
                             .collect(Collectors.toList());
                 }
                 return Collections.emptyList();
-            case "text":
-                if (sme instanceof MultiLanguageProperty) {
-                    List<LangStringTextType> values = ((MultiLanguageProperty) sme).getValue();
-                    if (values == null)
-                        return Collections.emptyList();
-                    return values.stream()
-                            .filter(Objects::nonNull)
-                            .map(LangStringTextType::getText)
-                            .collect(Collectors.toList());
-                }
-                return Collections.emptyList();
             case "semanticId": {
                 Reference ref = sme.getSemanticId();
                 if (ref == null || ref.getKeys() == null || ref.getKeys().isEmpty())
@@ -972,29 +961,20 @@ public class QueryEvaluator {
         if (sm == null || path == null || path.isEmpty())
             return null;
 
-        List<String> tokens = splitPathPreservingArrayNotation(path);
+        String[] tokens = path.split("\\.");
         SubmodelElement current = null;
 
-        for (int i = 0; i < tokens.size(); i++) {
-            String token = tokens.get(i);
-            boolean isArrayAccess = token.endsWith("[]");
-            String elementName = isArrayAccess ? token.substring(0, token.length() - 2) : token;
-
+        for (int i = 0; i < tokens.length; i++) {
+            String token = tokens[i];
             if (i == 0) {
-                current = findByIdShort(sm.getSubmodelElements(), elementName);
+                current = findByIdShort(sm.getSubmodelElements(), token);
             }
             else {
                 if (current instanceof SubmodelElementCollection) {
-                    current = findByIdShort(((SubmodelElementCollection) current).getValue(), elementName);
+                    current = findByIdShort(((SubmodelElementCollection) current).getValue(), token);
                 }
                 else if (current instanceof SubmodelElementList) {
-                    List<SubmodelElement> items = ((SubmodelElementList) current).getValue();
-                    if (items != null && !items.isEmpty()) {
-                        current = items.get(0);
-                    }
-                    else {
-                        return null;
-                    }
+                    current = findByIdShort(((SubmodelElementList) current).getValue(), token);
                 }
                 else {
                     return null;
@@ -1004,26 +984,6 @@ public class QueryEvaluator {
                 return null;
         }
         return current;
-    }
-
-
-    private List<String> splitPathPreservingArrayNotation(String path) {
-        List<String> result = new ArrayList<>();
-        if (path == null || path.isEmpty())
-            return result;
-
-        List<String> parts = Arrays.asList(path.split("\\."));
-        for (String part: parts) {
-            int bracketPos = part.indexOf('[');
-            if (bracketPos > 0) {
-                result.add(part.substring(0, bracketPos));
-                result.add(part.substring(bracketPos));
-            }
-            else {
-                result.add(part);
-            }
-        }
-        return result;
     }
 
 
@@ -1064,7 +1024,7 @@ public class QueryEvaluator {
                         processPathSegments(listItems, segments, segmentIndex + 1, attr, result);
                     }
                 }
-                // If no idShort match, search inside collections
+                // If no idShort match, search inside collections for the next segment
                 if (elem instanceof SubmodelElementCollection) {
                     processPathSegments(((SubmodelElementCollection) elem).getValue(), segments, segmentIndex, attr, result);
                 }
@@ -1087,7 +1047,7 @@ public class QueryEvaluator {
                         processPathSegments(((SubmodelElementList) elem).getValue(), segments, segmentIndex + 1, attr, result);
                     }
                 }
-                // If no idShort match and element is a collection/list, search inside it
+                // If no idShort match and element is a collection/list, search inside it for the next segment
                 if (!matched) {
                     if (elem instanceof SubmodelElementCollection) {
                         processPathSegments(((SubmodelElementCollection) elem).getValue(), segments, segmentIndex, attr, result);
@@ -1183,7 +1143,7 @@ public class QueryEvaluator {
     private boolean compareUsingStringOperator(Object a, Object b, ComparisonOperator operator) {
         if (a == null || b == null)
             return false;
-        String left = extractStringValue(a);
+        String left = String.valueOf(a);
         String right = String.valueOf(b);
 
         return switch (operator) {
@@ -1193,14 +1153,6 @@ public class QueryEvaluator {
             case REGEX -> Pattern.compile(right).matcher(left).matches();
             default -> false;
         };
-    }
-
-
-    private String extractStringValue(Object obj) {
-        if (obj instanceof LangStringTextType) {
-            return ((LangStringTextType) obj).getText();
-        }
-        return String.valueOf(obj);
     }
 
 
