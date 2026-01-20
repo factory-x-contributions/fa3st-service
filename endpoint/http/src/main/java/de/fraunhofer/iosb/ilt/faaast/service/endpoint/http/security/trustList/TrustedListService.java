@@ -107,19 +107,35 @@ public class TrustedListService {
         XPathFactory xpf = XPathFactory.newInstance();
         XPath xpath = xpf.newXPath();
 
-        String expression = "//*[local-name()='TrustServiceProvider']/*[local-name()='TSPServices']/*[local-name()='TSPService']/*[local-name()='ServiceName']";
-        NodeList serviceNameNodes = (NodeList) xpath.evaluate(expression, doc, XPathConstants.NODESET);
+        String expression = "//*[local-name()='ServiceDigitalIdentity']//*[local-name()='URI']";
+        NodeList uriNodes = (NodeList) xpath.evaluate(expression, doc, XPathConstants.NODESET);
 
-        for (int i = 0; i < serviceNameNodes.getLength(); i++) {
-            Element serviceNameEl = (Element) serviceNameNodes.item(i);
-            String serviceName = serviceNameEl.getTextContent().trim();
+        for (int i = 0; i < uriNodes.getLength(); i++) {
+            Element uriEl = (Element) uriNodes.item(i);
+            String issuer = uriEl.getTextContent().trim();
 
-            if (serviceName.startsWith("https://")) {
-                String issuer = serviceName;
+            if (issuer.startsWith("https://")) {
                 String jwksEndpoint = issuer.endsWith("/") ? issuer + "sts/jwks" : issuer + "/sts/jwks";
 
                 result.put(issuer, new TrustedIssuerMetadata(issuer, issuer, jwksEndpoint));
-                LOGGER.debug("Found trusted issuer: {}", issuer);
+                LOGGER.debug("Found trusted issuer from ServiceDigitalIdentity: {}", issuer);
+            }
+        }
+
+        if (result.isEmpty()) {
+            String supplyPointExpression = "//*[local-name()='ServiceSupplyPoint']";
+            NodeList supplyPointNodes = (NodeList) xpath.evaluate(supplyPointExpression, doc, XPathConstants.NODESET);
+
+            for (int i = 0; i < supplyPointNodes.getLength(); i++) {
+                Element spEl = (Element) supplyPointNodes.item(i);
+                String issuer = spEl.getTextContent().trim();
+
+                if (issuer.startsWith("https://") && !result.containsKey(issuer)) {
+                    String jwksEndpoint = issuer.endsWith("/") ? issuer + "sts/jwks" : issuer + "/sts/jwks";
+
+                    result.put(issuer, new TrustedIssuerMetadata(issuer, issuer, jwksEndpoint));
+                    LOGGER.debug("Found trusted issuer from ServiceSupplyPoint: {}", issuer);
+                }
             }
         }
 
