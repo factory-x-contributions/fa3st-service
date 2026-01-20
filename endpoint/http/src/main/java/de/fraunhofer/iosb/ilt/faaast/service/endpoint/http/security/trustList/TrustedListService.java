@@ -107,21 +107,23 @@ public class TrustedListService {
         XPathFactory xpf = XPathFactory.newInstance();
         XPath xpath = xpf.newXPath();
 
-        // Adjust XPath to your actual TSL schema / namespace
-        String expression = "//TrustServiceProvider/TSPServices/TSPService/ServiceName";
+        String expression = "//*[local-name()='TrustServiceProvider']/*[local-name()='TSPServices']/*[local-name()='TSPService']/*[local-name()='ServiceName']";
         NodeList serviceNameNodes = (NodeList) xpath.evaluate(expression, doc, XPathConstants.NODESET);
 
         for (int i = 0; i < serviceNameNodes.getLength(); i++) {
             Element serviceNameEl = (Element) serviceNameNodes.item(i);
             String serviceName = serviceNameEl.getTextContent().trim();
 
-            // ServiceName is something like "https://sts.consumer.com"
-            String issuer = serviceName;
-            String jwksEndpoint = issuer.endsWith("/") ? issuer + "sts/jwks" : issuer + "/sts/jwks";
+            if (serviceName.startsWith("https://")) {
+                String issuer = serviceName;
+                String jwksEndpoint = issuer.endsWith("/") ? issuer + "sts/jwks" : issuer + "/sts/jwks";
 
-            result.put(issuer, new TrustedIssuerMetadata(issuer, issuer, jwksEndpoint));
+                result.put(issuer, new TrustedIssuerMetadata(issuer, issuer, jwksEndpoint));
+                LOGGER.debug("Found trusted issuer: {}", issuer);
+            }
         }
 
+        LOGGER.debug("Parsed {} trusted issuers from TSL", result.size());
         return result;
     }
 }
