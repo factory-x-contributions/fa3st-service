@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
+import org.apache.poi.openxml4j.util.ZipSecureFile;
 import org.eclipse.digitaltwin.aas4j.v3.dataformat.aasx.AASXDeserializer;
 
 
@@ -36,6 +37,7 @@ public class AasxEnvironmentDeserializer implements EnvironmentDeserializer {
     public EnvironmentContext read(InputStream in, Charset charset) throws DeserializationException {
         try {
             AASXDeserializer deserializer = new AASXDeserializer(in);
+            ZipSecureFile.setMinInflateRatio(0.009);
             return EnvironmentContext.builder()
                     .environment(deserializer.read())
                     .files(deserializer.getRelatedFiles())
