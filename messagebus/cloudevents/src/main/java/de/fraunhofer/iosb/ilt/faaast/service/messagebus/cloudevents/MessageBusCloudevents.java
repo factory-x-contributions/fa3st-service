@@ -27,7 +27,6 @@ import de.fraunhofer.iosb.ilt.faaast.service.ServiceContext;
 import de.fraunhofer.iosb.ilt.faaast.service.config.CoreConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.dataformat.SerializationException;
 import de.fraunhofer.iosb.ilt.faaast.service.dataformat.json.JsonEventDeserializer;
-import de.fraunhofer.iosb.ilt.faaast.service.dataformat.json.JsonEventSerializer;
 import de.fraunhofer.iosb.ilt.faaast.service.exception.MessageBusException;
 import de.fraunhofer.iosb.ilt.faaast.service.messagebus.MessageBus;
 import de.fraunhofer.iosb.ilt.faaast.service.model.IdShortPath;
@@ -64,6 +63,7 @@ import java.util.Base64;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -72,6 +72,8 @@ import org.eclipse.digitaltwin.aas4j.v3.model.Key;
 import org.eclipse.digitaltwin.aas4j.v3.model.KeyTypes;
 import org.eclipse.digitaltwin.aas4j.v3.model.Referable;
 import org.eclipse.digitaltwin.aas4j.v3.model.Reference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -81,8 +83,9 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
 
     public static final String PUBLISH_ERROR_MSG = "%s publishing event via Cloudevents MQTT message bus for message type %s";
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(MessageBusCloudevents.class);
+
     private final Map<SubscriptionId, SubscriptionInfo> subscriptions;
-    private final JsonEventSerializer serializer;
     private final JsonEventDeserializer deserializer;
     private MessageBusCloudeventsConfig config;
     private PahoClient client;
@@ -90,7 +93,6 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
 
     public MessageBusCloudevents() {
         subscriptions = new ConcurrentHashMap<>();
-        serializer = new JsonEventSerializer();
         deserializer = new JsonEventDeserializer();
     }
 
@@ -111,8 +113,8 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
     public SubscriptionId subscribe(SubscriptionInfo subscriptionInfo) {
         Ensure.requireNonNull(subscriptionInfo, "subscriptionInfo must be non-null");
         subscriptionInfo.getSubscribedEvents()
-                .forEach(x -> determineEvents((Class<? extends EventMessage>) x).stream()
-                        .forEach(e -> client.subscribe(config.getTopicPrefix() + e.getSimpleName(), (t, message) -> {
+                .forEach(x -> determineEvents((Class<? extends EventMessage>) x)
+                        .forEach(e -> client.subscribe(config.getTopicPrefix().concat(getEventType(e)), (t, message) -> {
                             EventMessage event = deserializer.read(message.toString(), e);
                             if (subscriptionInfo.getFilter().test(event.getElement())) {
                                 subscriptionInfo.getHandler().accept(event);
@@ -130,8 +132,8 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
         SubscriptionInfo info = subscriptions.get(id);
         Ensure.requireNonNull(info.getSubscribedEvents(), "subscriptionInfo must be non-null");
         subscriptions.get(id).getSubscribedEvents().stream().forEach(a -> //find all events for given abstract or event
-        determineEvents((Class<? extends EventMessage>) a).stream().forEach(e -> //unsubscribe from all events
-        client.unsubscribe(config.getTopicPrefix() + e.getSimpleName())));
+                determineEvents((Class<? extends EventMessage>) a).stream().forEach(e -> //unsubscribe from all events
+                        client.unsubscribe(config.getTopicPrefix() + e.getSimpleName())));
         subscriptions.remove(id);
     }
 
@@ -156,6 +158,7 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
 
     @Override
     public void publish(EventMessage message) throws MessageBusException {
+        LOGGER.debug("Publishing {} to {}", message.getClass().getName(), config.getHost());
         try {
             CloudEvent cloudMessage = createCloudevent(message);
             client.publish(config.getTopicPrefix(), objectMapper.writeValueAsString(cloudMessage));
@@ -169,6 +172,8 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
 
     private CloudEvent createCloudevent(EventMessage message) throws URISyntaxException, SerializationException, JsonProcessingException {
         CloudEventBuilder cloudEventBuilder = createCloudEventBaseBuilder(message.getElement());
+
+        cloudEventBuilder.withType(config.getEventTypePrefix().concat(getEventType(message.getClass())));
 
         cloudEventBuilder = appendEventTypeSpecific(cloudEventBuilder, message);
 
@@ -234,71 +239,59 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
 
 
     private CloudEventBuilder appendError(CloudEventBuilder builder, ErrorEventMessage errorEventMessage) throws JsonProcessingException {
-        String typeBuilder = config.getEventTypePrefix() + getSpecificElementName(errorEventMessage.getElement()) +
-                "error";
-
-        builder = withData(builder, errorEventMessage);
-
-        return builder.withType(typeBuilder);
+        return withData(builder, errorEventMessage);
     }
 
 
     private CloudEventBuilder appendAccess(CloudEventBuilder builder, AccessEventMessage accessEventMessage) throws JsonProcessingException {
-        StringBuilder typeBuilder = new StringBuilder(config.getEventTypePrefix());
-
-        if (accessEventMessage instanceof ElementReadEventMessage) {
-            typeBuilder.append("read");
-        }
-        else if (accessEventMessage instanceof ValueReadEventMessage) {
-            typeBuilder.append("valueRead");
-        }
-        else if (accessEventMessage instanceof OperationInvokeEventMessage) {
-            builder = withData(builder, accessEventMessage);
-            typeBuilder.append("invoked");
-        }
-        else if (accessEventMessage instanceof OperationFinishEventMessage) {
-            builder = withData(builder, accessEventMessage);
-            typeBuilder.append("finished");
-        }
-        else {
-            throw new IllegalArgumentException(String.format("AccessEventMessage type not recognized: %s",
-                    accessEventMessage.getClass().getSimpleName()));
-        }
-
         if (accessEventMessage instanceof ReadEventMessage<?>) {
-            builder = withData(builder, accessEventMessage);
+            return withData(builder, accessEventMessage);
         }
 
-        return builder.withType(typeBuilder.toString());
+        return builder;
     }
 
 
     private CloudEventBuilder appendChange(CloudEventBuilder builder, ChangeEventMessage changeEventMessage) throws JsonProcessingException {
-        StringBuilder typeBuilder = new StringBuilder(config.getEventTypePrefix());
+        if (changeEventMessage instanceof ValueChangeEventMessage || changeEventMessage instanceof ElementChangeEventMessage) {
+            return withData(builder, changeEventMessage);
+        }
 
-        if (changeEventMessage instanceof ValueChangeEventMessage) {
-            builder = withData(builder, changeEventMessage);
-            typeBuilder.append("valueChanged");
+        return builder;
+    }
+
+
+    private String getEventType(Class<? extends EventMessage> messageClass) {
+        if (Objects.equals(messageClass, ValueChangeEventMessage.class)) {
+            return "valueChanged";
         }
-        else if (changeEventMessage instanceof ElementCreateEventMessage) {
-            typeBuilder.append("created");
+        else if (Objects.equals(messageClass, ElementCreateEventMessage.class)) {
+            return "created";
         }
-        else if (changeEventMessage instanceof ElementUpdateEventMessage) {
-            typeBuilder.append("changed");
+        else if (Objects.equals(messageClass, ElementUpdateEventMessage.class)) {
+            return "updated";
         }
-        else if (changeEventMessage instanceof ElementDeleteEventMessage) {
-            typeBuilder.append("deleted");
+        else if (Objects.equals(messageClass, ElementDeleteEventMessage.class)) {
+            return "deleted";
+        }
+        else if (Objects.equals(messageClass, ElementReadEventMessage.class)) {
+            return "read";
+        }
+        else if (Objects.equals(messageClass, ValueReadEventMessage.class)) {
+            return "valueRead";
+        }
+        else if (Objects.equals(messageClass, OperationInvokeEventMessage.class)) {
+            return "invoked";
+        }
+        else if (Objects.equals(messageClass, OperationFinishEventMessage.class)) {
+            return "finished";
+        }
+        else if (Objects.equals(messageClass, ErrorEventMessage.class)) {
+            return "error";
         }
         else {
-            throw new IllegalArgumentException(String.format("ChangeEventMessage type not recognized: %s",
-                    changeEventMessage.getClass().getSimpleName()));
+            throw new IllegalArgumentException(String.format("EventMessage type not recognized: %s", messageClass));
         }
-
-        if (changeEventMessage instanceof ElementChangeEventMessage) {
-            builder = withData(builder, changeEventMessage);
-        }
-
-        return builder.withType(typeBuilder.toString());
     }
 
 
