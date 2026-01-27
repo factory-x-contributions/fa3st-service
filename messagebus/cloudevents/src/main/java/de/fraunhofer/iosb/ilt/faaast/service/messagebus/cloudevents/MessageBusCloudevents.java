@@ -72,7 +72,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.eclipse.digitaltwin.aas4j.v3.model.HasSemantics;
 import org.eclipse.digitaltwin.aas4j.v3.model.Key;
 import org.eclipse.digitaltwin.aas4j.v3.model.KeyTypes;
@@ -102,7 +101,6 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
     private MessageBusCloudeventsConfig config;
     private PahoClient client;
     private ObjectMapper objectMapper;
-
 
     public MessageBusCloudevents() {
         running = new AtomicBoolean(false);
