@@ -83,6 +83,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * MessageBusCloudevents: Implements the external MessageBus interface and publishes/dispatchesEventMessages.
+ *
  * <p>
  * Also implements the internal messagebus functionality to support internal components relying on Events.
  */
