@@ -16,8 +16,6 @@ package de.fraunhofer.iosb.ilt.faaast.service.endpoint.http;
 
 import static de.fraunhofer.iosb.ilt.faaast.service.certificate.util.KeyStoreHelper.DEFAULT_ALIAS;
 
-import com.auth0.jwk.JwkProvider;
-import com.auth0.jwk.UrlJwkProvider;
 import de.fraunhofer.iosb.ilt.faaast.service.certificate.CertificateData;
 import de.fraunhofer.iosb.ilt.faaast.service.certificate.CertificateInformation;
 import de.fraunhofer.iosb.ilt.faaast.service.certificate.util.KeyStoreHelper;
@@ -31,10 +29,8 @@ import de.fraunhofer.iosb.ilt.faaast.service.util.EncodingHelper;
 import jakarta.servlet.DispatcherType;
 import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -118,16 +114,7 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
         context.addServlet(handler, "/*");
 
         if (Objects.nonNull(config.getJwkProvider())) {
-            URL jwkProviderUrl;
-            try {
-                jwkProviderUrl = new URL(config.getJwkProvider());
-            }
-            catch (MalformedURLException malformedJwkProviderUrl) {
-                throw new EndpointException("Could not parse JWK provider URL", malformedJwkProviderUrl);
-            }
-            JwkProvider jwkProvider = new UrlJwkProvider(jwkProviderUrl);
-
-            context.addFilter(new JwtValidationFilter(jwkProvider),
+            context.addFilter(new JwtValidationFilter(config.getJwkProvider()),
                     "*", EnumSet.allOf(DispatcherType.class));
         }
         server.setErrorHandler(new HttpErrorHandler(config));

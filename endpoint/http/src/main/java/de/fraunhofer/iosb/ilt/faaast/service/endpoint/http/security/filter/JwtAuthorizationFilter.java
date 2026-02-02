@@ -16,8 +16,11 @@ package de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.security.filter;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import jakarta.servlet.Filter;
 import jakarta.servlet.http.HttpServletRequest;
+import java.net.http.HttpResponse;
 
 
 /**
@@ -45,5 +48,25 @@ public abstract class JwtAuthorizationFilter implements Filter {
         String token = authHeaderValue.substring(BEARER_KWD.length()).trim();
 
         return JWT.decode(token);
+    }
+
+
+    /**
+     * Extracts a JWT from an HTTP response by reading its Authorization header,
+     * checking the presence of the "Bearer" keyword and returning the decoded token.
+     *
+     * @param response An HTTP response.
+     *
+     * @return The decoded JWT if present, else null
+     */
+    protected DecodedJWT extractAndDecodeJwt(HttpResponse<String> response) {
+        String json = response.body();
+
+        if (json == null) {
+            return null;
+        }
+        JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
+        String accessToken = obj.get("access_token").getAsString();
+        return JWT.decode(accessToken);
     }
 }
