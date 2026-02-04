@@ -60,17 +60,26 @@ public class JwtValidationFilter extends JwtAuthorizationFilter {
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(JwtValidationFilter.class);
 
     private JwkProvider jwkProvider = null;
-    private String jwkProviderUrl = null;
+    private String tokenExchangeUrl = null;
 
     public JwtValidationFilter(JwkProvider jwkProvider) {
         this.jwkProvider = jwkProvider;
     }
 
 
-    public JwtValidationFilter(String jwkProviderUrl) {
-        this.jwkProviderUrl = jwkProviderUrl;
+    /**
+     * Creates a JwtValidationFilter with token exchange enabled.
+     *
+     * @param tokenExchangeUrl the base URL for token exchange (e.g., the STS URL)
+     * @param tokenExchangeEnabled must be true to use token exchange mode
+     */
+    public JwtValidationFilter(String tokenExchangeUrl, boolean tokenExchangeEnabled) {
+        if (!tokenExchangeEnabled) {
+            throw new IllegalArgumentException("Use JwtValidationFilter(JwkProvider) constructor for non-token-exchange mode");
+        }
+        this.tokenExchangeUrl = tokenExchangeUrl;
         try {
-            this.jwkProvider = new UrlJwkProvider(new URL(jwkProviderUrl + "/jwks"));
+            this.jwkProvider = new UrlJwkProvider(new URL(tokenExchangeUrl + "/jwks"));
         }
         catch (MalformedURLException e) {
             LOGGER.error("WARNING: Could not create JWK Provider.");
@@ -111,9 +120,9 @@ public class JwtValidationFilter extends JwtAuthorizationFilter {
 
         DecodedJWT jwt = extractAndDecodeJwt(httpRequest);
 
-        // Do Token Exchange
+        // Do Token Exchange if configured
         try {
-            if (Objects.nonNull(jwkProviderUrl)) {
+            if (Objects.nonNull(tokenExchangeUrl)) {
                 HttpClient client = SslHelper.newClientAcceptingAllCertificates();
 
                 String form = "grant_type=" + URLEncoder.encode("urn:ietf:params:oauth:grant-type:token-exchange", StandardCharsets.UTF_8) +
@@ -125,7 +134,7 @@ public class JwtValidationFilter extends JwtAuthorizationFilter {
                 HttpRequest request = HttpRequest.newBuilder()
                         .header("Content-Type", "application/x-www-form-urlencoded")
                         .POST(HttpRequest.BodyPublishers.ofString(form))
-                        .uri(URI.create(jwkProviderUrl + "/token"))
+                        .uri(URI.create(tokenExchangeUrl + "/token"))
                         .build();
 
                 // Send request and get response body as String
