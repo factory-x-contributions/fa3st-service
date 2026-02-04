@@ -62,7 +62,7 @@ This HTTP Endpoint also supports JWT Access Tokens and simple JSON Access Rules 
 | shellCallbackAddress<br>*(optional)*    | String                                                      | The callback URI to be used for automated registration of shells at a registry. **Overrides `hostname`.** A descriptor will contain the following `href`-endpoints: [{shellCallbackAddress}, {shellCallbackAddress}/{id}]             | auto-detect (typically IP address)          |
 | submodelCallbackAddress<br>*(optional)* | String                                                      | The callback URI to be used for automated registration of submodels at a registry. **Overrides `hostname`.** A descriptor will contain the following `href`-endpoints: [{submodelCallbackAddress}, {submodelCallbackAddress}/{id}]    | auto-detect (typically IP address)          |
 | jwkProvider<br>*(optional)*             | String                                                      | The URL of the JWK provider to verify JWT Access Tokens. The URL should point to the JWKS endpoint (e.g., `http://localhost:4444/.well-known/jwks.json`). If `tokenExchange` is also set, this parameter is ignored.                  |                                             |
-| tokenExchange<br>*(optional)*           | String                                                      | The base URL of the Security Token Service (STS) for token exchange. When set, incoming JWT tokens are exchanged for a new access token via the OAuth 2.0 Token Exchange flow (RFC 8693) before validation. Takes precedence over `jwkProvider`. |                                             |
+| tokenExchange<br>*(optional)*           | String                                                      | The base URL of the Security Token Service (STS) for token exchange. When set, incoming JWT tokens are exchanged for a new access token via the OAuth 2.0 Token Exchange flow (RFC 8693) before validation. Overrides `jwkProvider`.  |                                             |
 | includeErrorDetails<br>*(optional)*     | Boolean                                                     | If set, stack trace is added to the HTTP responses incase of error.                                                                                                                                                                   | false                                       |
 | port<br>*(optional)*                    | Integer                                                     | The port to use.                                                                                                                                                                                                                      | 443                                         |
 | sniEnabled<br>*(optional)*              | Boolean                                                     | If Server Name Identification (SNI) should be enabled.<br>**This should only be disabled for testing purposes as it may present a security risk!**                                                                                    | true                                        |
@@ -95,6 +95,7 @@ This HTTP Endpoint also supports JWT Access Tokens and simple JSON Access Rules 
 		"corsMaxAge": 1000,
 		"hostname": "localhost",
 		"jwkProvider": "http://localhost:4444/.well-known/jwks.json",
+		"tokenExchange": "http://localhost:4444",
 		"includeErrorDetails": true,
 		"port": 443,
 		"profiles": [ "AAS_REPOSITORY_FULL", "AAS_FULL", "SUBMODEL_REPOSITORY_FULL", "SUBMODEL_FULL" ],
@@ -105,19 +106,6 @@ This HTTP Endpoint also supports JWT Access Tokens and simple JSON Access Rules 
 }
 ```
 
-```{code-block} json
-:caption: Example configuration with token exchange.
-:lineno-start: 1
-{
-	"endpoints": [ {
-		"@class": "de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.HttpEndpoint",
-		"aclFolder": "C:\\Users\\FAST\\ACL",
-		"tokenExchange": "http://localhost:4444",
-		"port": 443
-	} ],
-	// ...
-}
-```
 
 ### AAS Security Part 4
 
