@@ -61,7 +61,8 @@ This HTTP Endpoint also supports JWT Access Tokens and simple JSON Access Rules 
 | hostname<br>*(optional)*                | String                                                      | The hostname to be used for automated registration with registry.                                                                                                                                                                     | auto-detect (typically IP address)          |
 | shellCallbackAddress<br>*(optional)*    | String                                                      | The callback URI to be used for automated registration of shells at a registry. **Overrides `hostname`.** A descriptor will contain the following `href`-endpoints: [{shellCallbackAddress}, {shellCallbackAddress}/{id}]             | auto-detect (typically IP address)          |
 | submodelCallbackAddress<br>*(optional)* | String                                                      | The callback URI to be used for automated registration of submodels at a registry. **Overrides `hostname`.** A descriptor will contain the following `href`-endpoints: [{submodelCallbackAddress}, {submodelCallbackAddress}/{id}]    | auto-detect (typically IP address)          |
-| jwkProvider<br>*(optional)*             | String                                                      | The URL of the IdentityProvider to verify JWT Access Tokens.                                                                                                                                                                          |                                             |
+| jwkProvider<br>*(optional)*             | String                                                      | The URL of the JWK provider to verify JWT Access Tokens. The URL should point to the JWKS endpoint (e.g., `http://localhost:4444/.well-known/jwks.json`). If `tokenExchange` is also set, this parameter is ignored.                  |                                             |
+| tokenExchange<br>*(optional)*           | String                                                      | The base URL of the Security Token Service (STS) for token exchange. When set, incoming JWT tokens are exchanged for a new access token via the OAuth 2.0 Token Exchange flow (RFC 8693) before validation. Takes precedence over `jwkProvider`. |                                             |
 | includeErrorDetails<br>*(optional)*     | Boolean                                                     | If set, stack trace is added to the HTTP responses incase of error.                                                                                                                                                                   | false                                       |
 | port<br>*(optional)*                    | Integer                                                     | The port to use.                                                                                                                                                                                                                      | 443                                         |
 | sniEnabled<br>*(optional)*              | Boolean                                                     | If Server Name Identification (SNI) should be enabled.<br>**This should only be disabled for testing purposes as it may present a security risk!**                                                                                    | true                                        |
@@ -72,7 +73,7 @@ This HTTP Endpoint also supports JWT Access Tokens and simple JSON Access Rules 
 :::
 
 ```{code-block} json
-:caption: Example configuration section for HTTP Endpoint.
+:caption: Example configuration with direct JWK verification.
 :lineno-start: 1
 {
 	"endpoints": [ {
@@ -93,7 +94,7 @@ This HTTP Endpoint also supports JWT Access Tokens and simple JSON Access Rules 
 		"corsExposedHeaders": "X-Custom-Header",
 		"corsMaxAge": 1000,
 		"hostname": "localhost",
-		"jwkProvider": "http://localhost:4444",
+		"jwkProvider": "http://localhost:4444/.well-known/jwks.json",
 		"includeErrorDetails": true,
 		"port": 443,
 		"profiles": [ "AAS_REPOSITORY_FULL", "AAS_FULL", "SUBMODEL_REPOSITORY_FULL", "SUBMODEL_FULL" ],
@@ -104,10 +105,32 @@ This HTTP Endpoint also supports JWT Access Tokens and simple JSON Access Rules 
 }
 ```
 
+```{code-block} json
+:caption: Example configuration with token exchange.
+:lineno-start: 1
+{
+	"endpoints": [ {
+		"@class": "de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.HttpEndpoint",
+		"aclFolder": "C:\\Users\\FAST\\ACL",
+		"tokenExchange": "http://localhost:4444",
+		"port": 443
+	} ],
+	// ...
+}
+```
+
 ### AAS Security Part 4
 
 FA³ST Service supports the verification of JWT Access Tokens and simple Access rules.
-If the configuration includes the `jwkProvider` URL, all HTTP API requests will be validated.
+There are two modes for JWT validation:
+
+1. **Direct JWK Verification** (`jwkProvider`): The incoming JWT is verified directly against the JSON Web Key Set (JWKS) provided by the identity provider. Use this when clients authenticate directly with the identity provider and send tokens to FA³ST Service.
+
+2. **Token Exchange** (`tokenExchange`): The incoming JWT is first exchanged for a new access token using the OAuth 2.0 Token Exchange flow (RFC 8693), then the exchanged token is validated. Use this when you need to exchange tokens from an external identity provider for tokens issued by your Security Token Service (STS).
+
+If both `tokenExchange` and `jwkProvider` are configured, `tokenExchange` takes precedence.
+
+If the configuration includes either `jwkProvider` or `tokenExchange`, all HTTP API requests will be validated.
 To grant anonymous READ access, an Access rule must be defined and placed in the `aclFolder`:
 ```
 {
@@ -139,7 +162,7 @@ To grant anonymous READ access, an Access rule must be defined and placed in the
 }
 ```
 
-If a `jwkProvider` is defined and no Access rules exist, all HTTP API requests will be blocked.
+If `jwkProvider` or `tokenExchange` is defined and no Access rules exist, all HTTP API requests will be blocked.
 We recommend Ory Hydra as OAuth2 and OpenID Connect server, which can be used with the following curl requests to retrieve a JWT token.
 
 Create client_id:
