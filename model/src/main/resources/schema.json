@@ -661,10 +661,42 @@
                     "type": "string"
                 }
             },
-            "allOf": [
-                { "oneOf": [ { "required": ["ACL"] }, { "required": ["USEACL"] } ] },
-                { "oneOf": [ { "required": ["OBJECTS"] }, { "required": ["USEOBJECTS"] } ] },
-                { "oneOf": [ { "required": ["FORMULA"] }, { "required": ["USEFORMULA"] } ] } ],
+            "oneOf": [
+                {
+                    "required": [
+                        "ACL"
+                    ]
+                },
+                {
+                    "required": [
+                        "USEACL"
+                    ]
+                }
+            ],
+            "oneOf": [
+                {
+                    "required": [
+                        "OBJECTS"
+                    ]
+                },
+                {
+                    "required": [
+                        "USEOBJECTS"
+                    ]
+                }
+            ],
+            "oneOf": [
+                {
+                    "required": [
+                        "FORMULA"
+                    ]
+                },
+                {
+                    "required": [
+                        "USEFORMULA"
+                    ]
+                }
+            ],
             "additionalProperties": false
         }
     },

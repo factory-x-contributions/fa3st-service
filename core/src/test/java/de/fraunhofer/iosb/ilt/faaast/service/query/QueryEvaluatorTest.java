@@ -27,6 +27,8 @@ import org.eclipse.digitaltwin.aas4j.v3.model.AssetKind;
 import org.eclipse.digitaltwin.aas4j.v3.model.DataTypeDefXsd;
 import org.eclipse.digitaltwin.aas4j.v3.model.Environment;
 import org.eclipse.digitaltwin.aas4j.v3.model.KeyTypes;
+import org.eclipse.digitaltwin.aas4j.v3.model.LangStringTextType;
+import org.eclipse.digitaltwin.aas4j.v3.model.MultiLanguageProperty;
 import org.eclipse.digitaltwin.aas4j.v3.model.Property;
 import org.eclipse.digitaltwin.aas4j.v3.model.ReferenceTypes;
 import org.eclipse.digitaltwin.aas4j.v3.model.SpecificAssetId;
@@ -236,6 +238,147 @@ public class QueryEvaluatorTest {
 
         AssetAdministrationShell aas = new DefaultAssetAdministrationShell.Builder()
                 .id("https://example.com/aas/3")
+                .idShort("TestAAS")
+                .assetInformation(new DefaultAssetInformation.Builder()
+                        .assetKind(AssetKind.INSTANCE)
+                        .build())
+                .build();
+
+        return new DefaultEnvironment.Builder()
+                .assetAdministrationShells(aas)
+                .submodels(submodel)
+                .build();
+    }
+
+
+    private Environment createTestEnvironmentForContainsMatch(boolean matching) {
+        List<SubmodelElement> valuesItems = new ArrayList<>();
+        Property valueItem = new DefaultProperty.Builder()
+                .idShort("value")
+                .value(matching ? "On demand manufacturer" : "NonMatching")
+                .valueType(DataTypeDefXsd.STRING)
+                .build();
+        valuesItems.add(valueItem);
+
+        SubmodelElementList values = new DefaultSubmodelElementList.Builder()
+                .idShort("values")
+                .value(valuesItems)
+                .build();
+
+        Property language = new DefaultProperty.Builder()
+                .idShort("language")
+                .value(matching ? "EN" : "NonMatching")
+                .valueType(DataTypeDefXsd.STRING)
+                .build();
+
+        List<SubmodelElement> collectionItems = new ArrayList<>();
+        collectionItems.add(language);
+        collectionItems.add(values);
+
+        SubmodelElementCollection collection = new DefaultSubmodelElementCollection.Builder()
+                .value(collectionItems)
+                .build();
+
+        List<SubmodelElement> capabilitiesItems = new ArrayList<>();
+        capabilitiesItems.add(collection);
+
+        SubmodelElementList capabilities = new DefaultSubmodelElementList.Builder()
+                .idShort("capabilities")
+                .value(capabilitiesItems)
+                .build();
+
+        Submodel submodel = new DefaultSubmodel.Builder()
+                .id("https://example.com/submodel/3")
+                .idShort("TechnicalData")
+                .description(new DefaultLangStringTextType.Builder()
+                        .text("english text")
+                        .language("en")
+                        .build())
+                .submodelElements(capabilities)
+                .build();
+
+        AssetAdministrationShell aas = new DefaultAssetAdministrationShell.Builder()
+                .id("https://example.com/aas/3")
+                .idShort("TestAAS")
+                .assetInformation(new DefaultAssetInformation.Builder()
+                        .assetKind(AssetKind.INSTANCE)
+                        .build())
+                .build();
+
+        return new DefaultEnvironment.Builder()
+                .assetAdministrationShells(aas)
+                .submodels(submodel)
+                .build();
+    }
+
+
+    private Environment createTestEnvironmentForSoftwareNameplateContainsMatch(boolean matching) {
+        List<LangStringTextType> mlpValues = new ArrayList<>();
+        mlpValues.add(new DefaultLangStringTextType.Builder()
+                .language("en")
+                .text("Simulation software")
+                .build());
+        mlpValues.add(new DefaultLangStringTextType.Builder()
+                .language("de")
+                .text(matching ? "Auslegungssoftware und Elektrisches Antriebssystem" : "Some other description")
+                .build());
+
+        MultiLanguageProperty manufacturerProductDescription = new DefaultMultiLanguageProperty.Builder()
+                .idShort("ManufacturerProductDescription")
+                .value(mlpValues)
+                .build();
+
+        List<SubmodelElement> softwareNameplateTypeItems = new ArrayList<>();
+        softwareNameplateTypeItems.add(manufacturerProductDescription);
+
+        SubmodelElementCollection softwareNameplateType = new DefaultSubmodelElementCollection.Builder()
+                .idShort("SoftwareNameplateType")
+                .value(softwareNameplateTypeItems)
+                .build();
+
+        Submodel submodel = new DefaultSubmodel.Builder()
+                .id("https://example.com/submodel/software")
+                .idShort("SoftwareInfo")
+                .submodelElements(softwareNameplateType)
+                .build();
+
+        AssetAdministrationShell aas = new DefaultAssetAdministrationShell.Builder()
+                .id("https://example.com/aas/software")
+                .idShort("TestAAS")
+                .assetInformation(new DefaultAssetInformation.Builder()
+                        .assetKind(AssetKind.INSTANCE)
+                        .build())
+                .build();
+
+        return new DefaultEnvironment.Builder()
+                .assetAdministrationShells(aas)
+                .submodels(submodel)
+                .build();
+    }
+
+
+    private Environment createTestEnvironmentForAssetIdContainsMatch(boolean matching) {
+        List<SubmodelElement> assetIdItems = new ArrayList<>();
+        Property assetIdContains = new DefaultProperty.Builder()
+                .idShort("assetIdContains")
+                .value(matching ? "i4d.de/some/path" : "other.domain.com/path")
+                .valueType(DataTypeDefXsd.STRING)
+                .build();
+        assetIdItems.add(assetIdContains);
+
+        SubmodelElementCollection assetId = new DefaultSubmodelElementCollection.Builder()
+                .idShort("assetId")
+                .value(assetIdItems)
+                .build();
+
+        Submodel submodel = new DefaultSubmodel.Builder()
+                .id("https://example.com/submodel/assetid")
+                .idShort("AssetInfo")
+                .submodelElements(assetId)
+                .build();
+
+        AssetAdministrationShell aas = new DefaultAssetAdministrationShell.Builder()
+                .id("https://example.com/aas/assetid")
                 .idShort("TestAAS")
                 .assetInformation(new DefaultAssetInformation.Builder()
                         .assetKind(AssetKind.INSTANCE)
@@ -614,6 +757,38 @@ public class QueryEvaluatorTest {
 
 
     @Test
+    public void containsInList() throws Exception {
+        String json = """
+                {
+                  "$condition": {
+                    "$and": [
+                      { "$contains": [
+                          { "$field": "$sme.capabilities[].language#value" },
+                          { "$strVal": "EN" }
+                        ]
+                      },
+                      { "$contains": [
+                          { "$field": "$sme.capabilities[].values[]#value" },
+                          { "$strVal": "On demand manufacturer" }
+                        ]
+                      }
+                    ]
+                  }
+                }
+                """;
+        Query query = MAPPER.readValue(
+                json, new TypeReference<>() {});
+
+        Environment env = createTestEnvironmentForContainsMatch(true);
+        QueryEvaluator evaluator = new QueryEvaluator();
+        Submodel submodel = env.getSubmodels().get(0);
+        boolean result = evaluator.matches(query.get$condition(), submodel);
+        assertTrue(result);
+
+    }
+
+
+    @Test
     public void regexTest() throws Exception {
         String json = """
                 {"$condition":{"$and":[{"$regex":[{"$field":"$sm#idShort"},{"$strVal":".*"}]}]}}
@@ -645,9 +820,9 @@ public class QueryEvaluatorTest {
         Query query = MAPPER.readValue(
                 json, new TypeReference<>() {});
         Query query2 = MAPPER.readValue(
-                json, new TypeReference<>() {});
+                json2, new TypeReference<>() {});
         Query query3 = MAPPER.readValue(
-                json, new TypeReference<>() {});
+                json3, new TypeReference<>() {});
 
         Environment env = createTestEnvironmentForAndMatch(true);
         QueryEvaluator evaluator = new QueryEvaluator();
@@ -658,6 +833,122 @@ public class QueryEvaluatorTest {
         assertTrue(result);
         assertTrue(result2);
         assertTrue(result3);
+    }
+
+
+    @Test
+    public void softwareNameplateContains_withMatchingValues() throws Exception {
+        String json = """
+                {
+                  "$condition": {
+                    "$and": [
+                      {
+                        "$contains": [
+                          { "$field": "$sme.SoftwareNameplateType.ManufacturerProductDescription#value" },
+                          { "$strVal": "Auslegungssoftware" }
+                        ]
+                      },
+                      {
+                        "$contains": [
+                          { "$field": "$sme.SoftwareNameplateType.ManufacturerProductDescription#value" },
+                          { "$strVal": "Elektrisches Antriebssystem" }
+                        ]
+                      }
+                    ]
+                  }
+                }
+                """;
+
+        Query query = MAPPER.readValue(
+                json, new TypeReference<>() {});
+
+        Environment env = createTestEnvironmentForSoftwareNameplateContainsMatch(true);
+        QueryEvaluator evaluator = new QueryEvaluator();
+        Submodel submodel = env.getSubmodels().get(0);
+        boolean result = evaluator.matches(query.get$condition(), submodel);
+        assertTrue(result);
+    }
+
+
+    @Test
+    public void softwareNameplateContains_withNonMatchingValues() throws Exception {
+        String json = """
+                {
+                  "$condition": {
+                    "$and": [
+                      {
+                        "$contains": [
+                          { "$field": "$sme.SoftwareNameplateType.ManufacturerProductDescription#value" },
+                          { "$strVal": "Auslegungssoftware" }
+                        ]
+                      },
+                      {
+                        "$contains": [
+                          { "$field": "$sme.SoftwareNameplateType.ManufacturerProductDescription#value" },
+                          { "$strVal": "Elektrisches Antriebssystem" }
+                        ]
+                      }
+                    ]
+                  }
+                }
+                """;
+
+        Query query = MAPPER.readValue(
+                json, new TypeReference<>() {});
+
+        Environment env = createTestEnvironmentForSoftwareNameplateContainsMatch(false);
+        QueryEvaluator evaluator = new QueryEvaluator();
+        Submodel submodel = env.getSubmodels().get(0);
+        boolean result = evaluator.matches(query.get$condition(), submodel);
+        assertFalse(result);
+    }
+
+
+    @Test
+    public void assetIdContains_withMatchingValue() throws Exception {
+        String json = """
+                {
+                  "$condition": {
+                    "$contains": [
+                      { "$field": "$sme.assetId.assetIdContains#value" },
+                      { "$strVal": "i4d.de" }
+                    ]
+                  }
+                }
+                """;
+
+        Query query = MAPPER.readValue(
+                json, new TypeReference<>() {});
+
+        Environment env = createTestEnvironmentForAssetIdContainsMatch(true);
+        QueryEvaluator evaluator = new QueryEvaluator();
+        Submodel submodel = env.getSubmodels().get(0);
+        boolean result = evaluator.matches(query.get$condition(), submodel);
+        assertTrue(result);
+    }
+
+
+    @Test
+    public void assetIdContains_withNonMatchingValue() throws Exception {
+        String json = """
+                {
+                  "$condition": {
+                    "$contains": [
+                      { "$field": "$sme.assetId.assetIdContains#value" },
+                      { "$strVal": "i4d.de" }
+                    ]
+                  }
+                }
+                """;
+
+        Query query = MAPPER.readValue(
+                json, new TypeReference<>() {});
+
+        Environment env = createTestEnvironmentForAssetIdContainsMatch(false);
+        QueryEvaluator evaluator = new QueryEvaluator();
+        Submodel submodel = env.getSubmodels().get(0);
+        boolean result = evaluator.matches(query.get$condition(), submodel);
+        assertFalse(result);
     }
 
 }

@@ -109,6 +109,9 @@ public class ApiGateway {
      * @return the ApiResponse with only allowed AAS
      */
     public Response filterAas(HttpServletRequest request, GetAllAssetAdministrationShellsResponse response) {
+        if (Objects.isNull(response)) {
+            return null;
+        }
         response.getPayload().getContent()
                 .removeIf(aas -> aclList.values().stream()
                         .noneMatch(a -> a.getRules().stream()
@@ -126,6 +129,9 @@ public class ApiGateway {
      * @return the ApiResponse with only allowed Submodels
      */
     public Response filterSubmodels(HttpServletRequest request, GetAllSubmodelsResponse response) {
+        if (Objects.isNull(response)) {
+            return null;
+        }
         response.getPayload().getContent().removeIf(submodel -> {
             String path = "/submodels/" + EncodingHelper.base64Encode(submodel.getId());
             String method = request.getMethod();

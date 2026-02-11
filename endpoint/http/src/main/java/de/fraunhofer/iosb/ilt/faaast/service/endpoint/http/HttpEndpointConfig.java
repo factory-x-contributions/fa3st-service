@@ -64,6 +64,7 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     private String shellCallbackAddress;
     private String submodelCallbackAddress;
     private String jwkProvider;
+    private String tokenExchange;
     private String aclFolder;
 
     public HttpEndpointConfig() {
@@ -279,6 +280,16 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     }
 
 
+    public String getTokenExchange() {
+        return tokenExchange;
+    }
+
+
+    public void setTokenExchange(String tokenExchange) {
+        this.tokenExchange = tokenExchange;
+    }
+
+
     public String getAclFolder() {
         return aclFolder;
     }
@@ -320,6 +331,7 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
                 && Objects.equals(certificate, that.certificate)
                 && Objects.equals(hostname, that.hostname)
                 && Objects.equals(jwkProvider, that.jwkProvider)
+                && Objects.equals(tokenExchange, that.tokenExchange)
                 && Objects.equals(aclFolder, that.aclFolder)
                 && Objects.equals(profiles, that.profiles);
     }
@@ -348,6 +360,7 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
                 subprotocolBody,
                 subprotocolBodyEncoding,
                 jwkProvider,
+                tokenExchange,
                 aclFolder,
                 profiles);
     }
@@ -434,6 +447,12 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
 
         public B jwkProvider(String value) {
             getBuildingInstance().setJwkProvider(value);
+            return getSelf();
+        }
+
+
+        public B tokenExchange(String value) {
+            getBuildingInstance().setTokenExchange(value);
             return getSelf();
         }
 

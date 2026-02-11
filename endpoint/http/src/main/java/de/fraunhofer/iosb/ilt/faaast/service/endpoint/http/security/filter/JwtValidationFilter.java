@@ -18,6 +18,7 @@ import com.auth0.jwk.InvalidPublicKeyException;
 import com.auth0.jwk.Jwk;
 import com.auth0.jwk.JwkException;
 import com.auth0.jwk.JwkProvider;
+import com.auth0.jwk.UrlJwkProvider;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
@@ -25,6 +26,7 @@ import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.exceptions.SignatureVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.security.auth.AuthState;
+import de.fraunhofer.iosb.ilt.faaast.service.util.SslHelper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRequest;
@@ -32,8 +34,19 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Collections;
+import java.util.Objects;
 import org.slf4j.LoggerFactory;
 
 
@@ -46,10 +59,31 @@ public class JwtValidationFilter extends JwtAuthorizationFilter {
     private static final String AUTHORIZATION_KWD = "Authorization";
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(JwtValidationFilter.class);
 
-    private final JwkProvider jwkProvider;
+    private JwkProvider jwkProvider = null;
+    private String tokenExchangeUrl = null;
 
     public JwtValidationFilter(JwkProvider jwkProvider) {
         this.jwkProvider = jwkProvider;
+    }
+
+
+    /**
+     * Creates a JwtValidationFilter with token exchange enabled.
+     *
+     * @param tokenExchangeUrl the base URL for token exchange (e.g., the STS URL)
+     * @param tokenExchangeEnabled must be true to use token exchange mode
+     */
+    public JwtValidationFilter(String tokenExchangeUrl, boolean tokenExchangeEnabled) {
+        if (!tokenExchangeEnabled) {
+            throw new IllegalArgumentException("Use JwtValidationFilter(JwkProvider) constructor for non-token-exchange mode");
+        }
+        this.tokenExchangeUrl = tokenExchangeUrl;
+        try {
+            this.jwkProvider = new UrlJwkProvider(new URL(tokenExchangeUrl + "/jwks"));
+        }
+        catch (MalformedURLException e) {
+            LOGGER.error("WARNING: Could not create JWK Provider.");
+        }
     }
 
 
@@ -84,8 +118,41 @@ public class JwtValidationFilter extends JwtAuthorizationFilter {
             return;
         }
 
-        // Extract JWT
         DecodedJWT jwt = extractAndDecodeJwt(httpRequest);
+
+        // Do Token Exchange if configured
+        try {
+            if (Objects.nonNull(tokenExchangeUrl)) {
+                HttpClient client = SslHelper.newClientAcceptingAllCertificates();
+
+                String form = "grant_type=" + URLEncoder.encode("urn:ietf:params:oauth:grant-type:token-exchange", StandardCharsets.UTF_8) +
+                        "&subject_token_type=" + URLEncoder.encode("urn:ietf:params:oauth:token-type:jwt", StandardCharsets.UTF_8) +
+                        "&requested_token_type=" + URLEncoder.encode("urn:ietf:params:oauth:token-type:access_token", StandardCharsets.UTF_8) +
+                        "&subject_token=" + jwt.getToken() +
+                        "&audience=" + URLEncoder.encode("fa3st", StandardCharsets.UTF_8);
+
+                HttpRequest request = HttpRequest.newBuilder()
+                        .header("Content-Type", "application/x-www-form-urlencoded")
+                        .POST(HttpRequest.BodyPublishers.ofString(form))
+                        .uri(URI.create(tokenExchangeUrl + "/token"))
+                        .build();
+
+                // Send request and get response body as String
+                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+                if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                    jwt = extractAndDecodeJwt(response);
+                }
+                else {
+                    LOGGER.error("Token exchange failed, continue with previous token.");
+                }
+            }
+        }
+        catch (InterruptedException | KeyManagementException | NoSuchAlgorithmException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Could not exchange token with provider sts.", e);
+        }
+
         if (jwt == null || !validateJWT(jwt)) {
             LOGGER.debug("Could not extract and validate JWT");
             respondForbidden(httpResponse);
@@ -105,7 +172,6 @@ public class JwtValidationFilter extends JwtAuthorizationFilter {
 
 
     private boolean validateJWT(DecodedJWT decodedJWT) {
-        // Your JWT validation logic here
         Jwk jwk;
         try {
             jwk = jwkProvider.get(decodedJWT.getKeyId());

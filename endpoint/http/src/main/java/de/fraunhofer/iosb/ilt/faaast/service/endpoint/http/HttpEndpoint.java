@@ -117,7 +117,11 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
         RequestHandlerServlet handler = new RequestHandlerServlet(this, config, serviceContext);
         context.addServlet(handler, "/*");
 
-        if (Objects.nonNull(config.getJwkProvider())) {
+        if (Objects.nonNull(config.getTokenExchange())) {
+            context.addFilter(new JwtValidationFilter(config.getTokenExchange(), true),
+                    "*", EnumSet.allOf(DispatcherType.class));
+        }
+        else if (Objects.nonNull(config.getJwkProvider())) {
             URL jwkProviderUrl;
             try {
                 jwkProviderUrl = new URL(config.getJwkProvider());
@@ -126,7 +130,6 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
                 throw new EndpointException("Could not parse JWK provider URL", malformedJwkProviderUrl);
             }
             JwkProvider jwkProvider = new UrlJwkProvider(jwkProviderUrl);
-
             context.addFilter(new JwtValidationFilter(jwkProvider),
                     "*", EnumSet.allOf(DispatcherType.class));
         }
