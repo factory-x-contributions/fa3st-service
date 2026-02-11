@@ -241,7 +241,7 @@ public class PahoClient {
         MqttMessage msg = new MqttMessage(content.getBytes());
         try {
             mqttClient.publish(topic, msg);
-            logger.info("message published - topic: {}, data: {}", topic, content);
+            logger.info("message published - server: {} topic: {}, data: {}", mqttClient.getServerURI(), topic, content);
         }
         catch (MqttException e) {
             throw new MessageBusException("publishing message on Cloudevents MQTT message bus failed", e);
