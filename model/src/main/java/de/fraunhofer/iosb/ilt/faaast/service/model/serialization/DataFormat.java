@@ -65,7 +65,7 @@ public enum DataFormat {
      */
     public static DataFormat forContentType(MediaType contentType) {
         return Stream.of(DataFormat.values())
-                .filter(x -> Objects.equals(x.getContentType(), contentType))
+                .filter(x -> x.getContentType().is(contentType))
                 .findAny()
                 .orElseThrow(() -> new IllegalArgumentException(String.format("unsupported dataformat '%s'", contentType)));
     }
