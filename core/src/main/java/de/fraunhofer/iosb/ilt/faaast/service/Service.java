@@ -257,8 +257,9 @@ public class Service implements ServiceContext {
     /**
      * Starts the service.This includes starting the message bus and endpoints.
      *
-     * @throws de.fraunhofer.iosb.ilt.faaast.service.exception.MessageBusException if starting message bus fails
-     * @throws de.fraunhofer.iosb.ilt.faaast.service.exception.EndpointException if starting endpoints fails
+     * @throws MessageBusException if starting message bus fails
+     * @throws EndpointException if starting endpoints fails
+     * @throws PersistenceException if storage error occurs
      * @throws IllegalArgumentException if AAS environment is null/has not been properly initialized
      */
     public void start() throws MessageBusException, EndpointException, PersistenceException {

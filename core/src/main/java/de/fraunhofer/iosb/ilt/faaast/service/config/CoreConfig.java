@@ -30,9 +30,11 @@ public class CoreConfig {
     public static final CoreConfig DEFAULT = builder().build();
 
     private static final long DEFAULT_ASSET_CONNECTION_RETRY_INTERVAL = 1000;
+    private static final double DEFAULT_MIN_INFLATE_RATIO = 0.001;
     private static final int DEFAULT_REQUEST_HANDLER_THREADPOOL_SIZE = 1;
 
     private long assetConnectionRetryInterval;
+    private double minInflateRatio;
     private int requestHandlerThreadPoolSize;
     private ModelValidatorConfig validationOnLoad;
     private ModelValidatorConfig validationOnCreate;
@@ -42,6 +44,7 @@ public class CoreConfig {
 
     public CoreConfig() {
         this.assetConnectionRetryInterval = DEFAULT_ASSET_CONNECTION_RETRY_INTERVAL;
+        this.minInflateRatio = DEFAULT_MIN_INFLATE_RATIO;
         this.requestHandlerThreadPoolSize = DEFAULT_REQUEST_HANDLER_THREADPOOL_SIZE;
         this.validationOnLoad = ModelValidatorConfig.builder()
                 .validateConstraints(true)
@@ -75,6 +78,16 @@ public class CoreConfig {
 
     public void setAssetConnectionRetryInterval(long assetConnectionRetryInterval) {
         this.assetConnectionRetryInterval = assetConnectionRetryInterval;
+    }
+
+
+    public double getMinInflateRatio() {
+        return minInflateRatio;
+    }
+
+
+    public void setMinInflateRatio(double minInflateRatio) {
+        this.minInflateRatio = minInflateRatio;
     }
 
 
@@ -141,6 +154,7 @@ public class CoreConfig {
     @Override
     public int hashCode() {
         return Objects.hash(assetConnectionRetryInterval,
+                minInflateRatio,
                 requestHandlerThreadPoolSize,
                 validationOnLoad,
                 validationOnCreate,
@@ -163,6 +177,7 @@ public class CoreConfig {
         }
         final CoreConfig other = (CoreConfig) obj;
         return Objects.equals(this.assetConnectionRetryInterval, other.assetConnectionRetryInterval)
+                && Objects.equals(this.minInflateRatio, other.minInflateRatio)
                 && Objects.equals(this.requestHandlerThreadPoolSize, other.requestHandlerThreadPoolSize)
                 && Objects.equals(this.validationOnLoad, other.validationOnLoad)
                 && Objects.equals(this.validationOnCreate, other.validationOnCreate)
@@ -181,6 +196,12 @@ public class CoreConfig {
 
         public Builder assetConnectionRetryInterval(long value) {
             getBuildingInstance().setAssetConnectionRetryInterval(value);
+            return getSelf();
+        }
+
+
+        public Builder minInflateRatio(double value) {
+            getBuildingInstance().setMinInflateRatio(value);
             return getSelf();
         }
 
