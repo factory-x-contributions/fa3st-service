@@ -4,6 +4,7 @@
             {
                 "requestHandlerThreadPoolSize": 2,
                 "assetConnectionRetryInterval": 1000,
+                "minInflateRatio": 0.001,
                 "validationOnLoad":
                         {
                             "validateConstraints": true,
