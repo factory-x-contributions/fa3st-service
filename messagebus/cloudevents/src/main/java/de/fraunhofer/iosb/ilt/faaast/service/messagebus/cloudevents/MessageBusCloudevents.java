@@ -25,42 +25,34 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import de.fraunhofer.iosb.ilt.faaast.service.ServiceContext;
 import de.fraunhofer.iosb.ilt.faaast.service.config.CoreConfig;
-import de.fraunhofer.iosb.ilt.faaast.service.dataformat.SerializationException;
 import de.fraunhofer.iosb.ilt.faaast.service.exception.MessageBusException;
 import de.fraunhofer.iosb.ilt.faaast.service.messagebus.MessageBus;
 import de.fraunhofer.iosb.ilt.faaast.service.model.IdShortPath;
+import de.fraunhofer.iosb.ilt.faaast.service.model.exception.PersistenceException;
+import de.fraunhofer.iosb.ilt.faaast.service.model.exception.ResourceNotFoundException;
 import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.EventMessage;
 import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.SubscriptionId;
 import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.SubscriptionInfo;
 import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.event.access.AccessEventMessage;
-import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.event.access.ElementReadEventMessage;
 import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.event.access.OperationFinishEventMessage;
 import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.event.access.OperationInvokeEventMessage;
-import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.event.access.ReadEventMessage;
-import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.event.access.ValueReadEventMessage;
-import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.event.change.ChangeEventMessage;
-import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.event.change.ElementChangeEventMessage;
 import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.event.change.ElementCreateEventMessage;
 import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.event.change.ElementDeleteEventMessage;
 import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.event.change.ElementUpdateEventMessage;
 import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.event.change.ValueChangeEventMessage;
 import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.event.error.ErrorEventMessage;
+import de.fraunhofer.iosb.ilt.faaast.service.util.EncodingHelper;
 import de.fraunhofer.iosb.ilt.faaast.service.util.Ensure;
+import de.fraunhofer.iosb.ilt.faaast.service.util.EnvironmentHelper;
 import de.fraunhofer.iosb.ilt.faaast.service.util.ReferenceHelper;
 import io.cloudevents.CloudEvent;
 import io.cloudevents.core.builder.CloudEventBuilder;
 import io.cloudevents.jackson.JsonFormat;
-import io.github.classgraph.ClassGraph;
-import io.github.classgraph.ScanResult;
-import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -72,6 +64,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import org.eclipse.digitaltwin.aas4j.v3.model.HasSemantics;
 import org.eclipse.digitaltwin.aas4j.v3.model.Key;
 import org.eclipse.digitaltwin.aas4j.v3.model.KeyTypes;
@@ -92,6 +85,7 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
     public static final String PUBLISH_ERROR_MSG = "%s publishing event via Cloudevents MQTT message bus for message type %s";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageBusCloudevents.class);
+    private static final String APPLICATION_JSON = "application/json";
 
     // Prepare internal message bus to not interfere with internal communications
     private final BlockingQueue<EventMessage> messageQueue;
@@ -99,6 +93,7 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
     private final ExecutorService executor;
 
     private final Map<SubscriptionId, SubscriptionInfo> subscriptions;
+    private Function<Reference, Referable> referableSupplier = r -> null;
     private MessageBusCloudeventsConfig config;
     private PahoClient client;
     private ObjectMapper objectMapper;
@@ -169,6 +164,16 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
                 .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
                 .setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
         objectMapper.registerModule(JsonFormat.getCloudEventJacksonModule());
+        referableSupplier = reference -> {
+            try {
+                return EnvironmentHelper.resolve(reference, serviceContext.getAASEnvironment());
+            }
+            catch (PersistenceException | ResourceNotFoundException persistenceException) {
+                // TODO figure out what to do here
+                throw new RuntimeException("Resource not found after value change event", persistenceException);
+
+            }
+        };
 
         running.set(false);
     }
@@ -178,12 +183,14 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
     public void publish(EventMessage message) throws MessageBusException {
         LOGGER.debug("Publishing {} to {}", message.getClass().getName(), config.getHost());
         try {
-            CloudEvent cloudMessage = createCloudevent(message);
-            client.publish(config.getTopicPrefix(), objectMapper.writeValueAsString(cloudMessage));
-            // Also distribute event in internal message bus
+            // First, distribute event in internal message bus
             messageQueue.put(message);
+            if (isCloudeventMessage(message)) {
+                CloudEvent cloudMessage = createCloudevent(message);
+                client.publish(config.getTopicPrefix(), objectMapper.writeValueAsString(cloudMessage));
+            }
         }
-        catch (JsonProcessingException | URISyntaxException | SerializationException publishException) {
+        catch (JsonProcessingException | URISyntaxException publishException) {
             throw new MessageBusException(String.format(PUBLISH_ERROR_MSG, publishException.getClass().getSimpleName(), message.getClass()),
                     publishException);
         }
@@ -191,6 +198,11 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
             Thread.currentThread().interrupt();
             throw new MessageBusException("adding message to internal queue failed", e);
         }
+    }
+
+
+    private boolean isCloudeventMessage(EventMessage m) {
+        return !(m instanceof ErrorEventMessage) && !(m instanceof AccessEventMessage);
     }
 
 
@@ -214,15 +226,15 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
     }
 
 
-    private CloudEvent createCloudevent(EventMessage message) throws URISyntaxException, SerializationException, JsonProcessingException {
+    private CloudEvent createCloudevent(EventMessage message) throws URISyntaxException, JsonProcessingException {
         CloudEventBuilder cloudEventBuilder = createCloudEventBaseBuilder(message.getElement());
+
+        cloudEventBuilder = appendSemanticId(cloudEventBuilder, message);
 
         cloudEventBuilder.withType(config.getEventTypePrefix().concat(getEventType(message.getClass())));
 
-        cloudEventBuilder = appendEventTypeSpecific(cloudEventBuilder, message);
-
-        if (message.getElement().getKeys().size() == 1) {
-            cloudEventBuilder = appendSemanticId(cloudEventBuilder, message);
+        if (config.isSlimEvents()) {
+            cloudEventBuilder.withData(objectMapper.writeValueAsBytes(referableSupplier.apply(message.getElement())));
         }
 
         return cloudEventBuilder.build();
@@ -231,18 +243,9 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
 
     private CloudEventBuilder appendSemanticId(CloudEventBuilder cloudEventBuilder, EventMessage message) {
         // Get referable element (only possible with some EventMessage types)
-        Referable element;
-        if (message instanceof ElementChangeEventMessage elementChangeEventMessage) {
-            element = elementChangeEventMessage.getValue();
-        }
-        else if (message instanceof ElementReadEventMessage elementReadEventMessage) {
-            element = elementReadEventMessage.getValue();
-        }
-        else {
-            return cloudEventBuilder;
-        }
+        Referable element = referableSupplier.apply(message.getElement());
 
-        Optional<String> maybeSemanticId = getSemanticIdFirstKeyValue(element);
+        Optional<String> maybeSemanticId = Optional.ofNullable(getSemanticId(element));
         if (maybeSemanticId.isPresent()) {
             cloudEventBuilder = cloudEventBuilder
                     .withExtension("semanticid", maybeSemanticId.get());
@@ -252,56 +255,14 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
     }
 
 
-    private Optional<String> getSemanticIdFirstKeyValue(Referable referable) {
+    private String getSemanticId(Referable referable) {
 
-        if (!(referable instanceof HasSemantics semanticElement)) {
-            return Optional.empty();
-
-        }
-        Key semanticId = ReferenceHelper.getRoot(semanticElement.getSemanticId());
-
-        if (semanticId == null) {
-            return Optional.empty();
+        if (!(referable instanceof HasSemantics semanticElement) || ReferenceHelper.getRoot(semanticElement.getSemanticId()) == null) {
+            return null;
         }
 
-        return Optional.ofNullable(semanticId.getValue());
-    }
-
-
-    private CloudEventBuilder appendEventTypeSpecific(CloudEventBuilder builder, EventMessage message) throws JsonProcessingException {
-        if (message instanceof ChangeEventMessage changeEventMessage) {
-            return appendChange(builder, changeEventMessage);
-        }
-        else if (message instanceof AccessEventMessage accessEventMessage) {
-            return appendAccess(builder, accessEventMessage);
-        }
-        else if (message instanceof ErrorEventMessage errorEventMessage) {
-            return appendError(builder, errorEventMessage);
-        }
-        throw new IllegalArgumentException(String.format("EventType unknown: %s", message.getClass().getSimpleName()));
-    }
-
-
-    private CloudEventBuilder appendError(CloudEventBuilder builder, ErrorEventMessage errorEventMessage) throws JsonProcessingException {
-        return withData(builder, errorEventMessage);
-    }
-
-
-    private CloudEventBuilder appendAccess(CloudEventBuilder builder, AccessEventMessage accessEventMessage) throws JsonProcessingException {
-        if (accessEventMessage instanceof ReadEventMessage<?>) {
-            return withData(builder, accessEventMessage);
-        }
-
-        return builder;
-    }
-
-
-    private CloudEventBuilder appendChange(CloudEventBuilder builder, ChangeEventMessage changeEventMessage) throws JsonProcessingException {
-        if (changeEventMessage instanceof ValueChangeEventMessage || changeEventMessage instanceof ElementChangeEventMessage) {
-            return withData(builder, changeEventMessage);
-        }
-
-        return builder;
+        // If the referable is changed in between the if statement and this one, throw nullpointer
+        return Objects.requireNonNull(ReferenceHelper.getRoot(semanticElement.getSemanticId())).getValue();
     }
 
 
@@ -318,39 +279,33 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
         else if (Objects.equals(messageClass, ElementDeleteEventMessage.class)) {
             return "deleted";
         }
-        else if (Objects.equals(messageClass, ElementReadEventMessage.class)) {
-            return "read";
-        }
-        else if (Objects.equals(messageClass, ValueReadEventMessage.class)) {
-            return "valueRead";
-        }
         else if (Objects.equals(messageClass, OperationInvokeEventMessage.class)) {
             return "invoked";
         }
         else if (Objects.equals(messageClass, OperationFinishEventMessage.class)) {
             return "finished";
         }
-        else if (Objects.equals(messageClass, ErrorEventMessage.class)) {
-            return "error";
-        }
         else {
-            throw new IllegalArgumentException(String.format("EventMessage type not recognized: %s", messageClass));
+            throw new IllegalArgumentException(String.format("EventMessage type not supported: %s", messageClass));
         }
     }
 
 
+    private CloudEventBuilder createCloudEventBaseBuilder(Reference reference) throws URISyntaxException {
+        return CloudEventBuilder
+                .v1() // specversion
+                .withId(UUID.randomUUID().toString()) // id
+                .withSource(getSourceUri(reference)) // source
+                .withDataContentType(APPLICATION_JSON) // datacontenttype
+                .withDataSchema(new URI(config.getDataSchemaPrefix() + getSpecificElementName(reference))) // dataschema
+                .withTime(OffsetDateTime.now()); // time
+    }
+
+
     private static String getSpecificElementName(Reference reference) {
-        List<Key> referenceKeys = reference.getKeys();
+        KeyTypes effectiveKeyType = Optional.ofNullable(ReferenceHelper.getEffectiveKeyType(reference)).orElseThrow();
 
-        if (referenceKeys.isEmpty()) {
-            throw new IllegalArgumentException(String.format("Event reference contains no keys: %s", reference));
-        }
-
-        KeyTypes elementKeyType = referenceKeys
-                .get(referenceKeys.size() - 1) // Get most specific key
-                .getType(); // Get type from enum
-
-        String[] elementNameParts = elementKeyType.toString().split("_");
+        String[] elementNameParts = effectiveKeyType.toString().split("_");
         StringBuilder elementNameBuilder = new StringBuilder();
 
         for (String elementNamePart: elementNameParts) {
@@ -362,57 +317,26 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
     }
 
 
-    private CloudEventBuilder withData(CloudEventBuilder builder, EventMessage eventMessage) throws JsonProcessingException {
-        if (config.isSlimEvents()) {
-            return builder;
-        }
-
-        if (eventMessage instanceof ElementChangeEventMessage messageWithReferable) {
-            return builder.withData(objectMapper.writeValueAsBytes(messageWithReferable.getValue()));
-        }
-
-        if (eventMessage instanceof ValueChangeEventMessage valueChangeEventMessage) {
-            return builder.withData(valueChangeEventMessage.getNewValue().toString().getBytes(StandardCharsets.UTF_8));
-        }
-
-        if (eventMessage instanceof ErrorEventMessage errorEventMessage) {
-            return builder.withData(errorEventMessage.getMessage().getBytes(StandardCharsets.UTF_8));
-        }
-
-        if (eventMessage instanceof ReadEventMessage<?> readEventMessage) {
-            return builder.withData(objectMapper.writeValueAsBytes(readEventMessage.getValue()));
-        }
-
-        return builder;
-    }
-
-
-    private CloudEventBuilder createCloudEventBaseBuilder(Reference reference) throws URISyntaxException {
-        return CloudEventBuilder
-                .v1() // specversion
-                .withId(UUID.randomUUID().toString()) // id
-                .withSource(getSourceUri(reference)) // source
-                .withDataContentType("application/json") // datacontenttype
-                .withDataSchema(new URI(config.getDataSchemaPrefix() + getSpecificElementName(reference))) // dataschema
-                .withTime(OffsetDateTime.now()); // time
-    }
-
-
     private URI getSourceUri(Reference reference) throws URISyntaxException {
         Collection<String> uriString = new ArrayList<>();
         uriString.add(config.getEventCallbackAddress());
 
-        String resourceName = switch (reference.getKeys().get(0).getType()) {
+        Key root = ReferenceHelper.getRoot(reference);
+        if (root == null) {
+            throw new IllegalArgumentException("Event reference base element is null");
+        }
+
+        String resourceName = switch (root.getType()) {
             case ASSET_ADMINISTRATION_SHELL -> "shells";
             case SUBMODEL -> "submodels";
             case CONCEPT_DESCRIPTION -> "concept-descriptions";
-            default -> throw new IllegalArgumentException(String.format("Reference base element type must be one of %s, %s, %s",
-                    ASSET_ADMINISTRATION_SHELL, SUBMODEL, CONCEPT_DESCRIPTION));
+            default -> throw new IllegalArgumentException(String.format("Reference base element type must be one of %s, %s, %s but was %s",
+                    ASSET_ADMINISTRATION_SHELL, SUBMODEL, CONCEPT_DESCRIPTION, root.getType()));
         };
         uriString.add(resourceName);
 
-        String resourceIdentifier = reference.getKeys().get(0).getValue();
-        uriString.add(base64Encode(resourceIdentifier));
+        String resourceIdentifier = root.getValue();
+        uriString.add(EncodingHelper.base64UrlEncode(resourceIdentifier));
 
         if (reference.getKeys().size() > 1) {
             // SubmodelElement
@@ -422,28 +346,5 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
         }
 
         return new URI(String.join("/", uriString));
-    }
-
-
-    private String base64Encode(String toEncode) {
-        return Base64.getEncoder().encodeToString(toEncode.getBytes(StandardCharsets.UTF_8));
-    }
-
-
-    private List<Class<EventMessage>> determineEvents(Class<? extends EventMessage> messageType) {
-        try (ScanResult scanResult = new ClassGraph().acceptPackages("de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.event")
-                .enableClassInfo().scan()) {
-            if (Modifier.isAbstract(messageType.getModifiers())) {
-                return scanResult
-                        .getSubclasses(messageType.getName())
-                        .filter(x -> !x.isAbstract())
-                        .loadClasses(EventMessage.class);
-            }
-            else {
-                List<Class<EventMessage>> list = new ArrayList<>();
-                list.add((Class<EventMessage>) messageType);
-                return list;
-            }
-        }
     }
 }
