@@ -169,9 +169,8 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
                 return EnvironmentHelper.resolve(reference, serviceContext.getAASEnvironment());
             }
             catch (PersistenceException | ResourceNotFoundException persistenceException) {
-                // TODO figure out what to do here
-                throw new RuntimeException("Resource not found after value change event", persistenceException);
-
+                LOGGER.warn("A resource was not found after an event fired.", persistenceException);
+                return null;
             }
         };
 
@@ -181,11 +180,11 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
 
     @Override
     public void publish(EventMessage message) throws MessageBusException {
-        LOGGER.debug("Publishing {} to {}", message.getClass().getName(), config.getHost());
         try {
             // First, distribute event in internal message bus
             messageQueue.put(message);
             if (isCloudeventMessage(message)) {
+                LOGGER.debug("Publishing {} to {}", message.getClass().getSimpleName(), config.getHost());
                 CloudEvent cloudMessage = createCloudevent(message);
                 client.publish(config.getTopicPrefix(), objectMapper.writeValueAsString(cloudMessage));
             }
@@ -233,8 +232,9 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
 
         cloudEventBuilder.withType(config.getEventTypePrefix().concat(getEventType(message.getClass())));
 
-        if (config.isSlimEvents()) {
-            cloudEventBuilder.withData(objectMapper.writeValueAsBytes(referableSupplier.apply(message.getElement())));
+        Referable referable = referableSupplier.apply(message.getElement());
+        if (config.isSlimEvents() && referable != null) {
+            cloudEventBuilder.withData(objectMapper.writeValueAsBytes(referable));
         }
 
         return cloudEventBuilder.build();
@@ -245,7 +245,7 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
         // Get referable element (only possible with some EventMessage types)
         Referable element = referableSupplier.apply(message.getElement());
 
-        Optional<String> maybeSemanticId = Optional.ofNullable(getSemanticId(element));
+        Optional<String> maybeSemanticId = Optional.ofNullable(element).map(this::getSemanticId);
         if (maybeSemanticId.isPresent()) {
             cloudEventBuilder = cloudEventBuilder
                     .withExtension("semanticid", maybeSemanticId.get());
