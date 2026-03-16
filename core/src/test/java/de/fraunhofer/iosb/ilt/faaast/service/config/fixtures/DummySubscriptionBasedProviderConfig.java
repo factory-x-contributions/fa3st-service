@@ -14,6 +14,7 @@
  */
 package de.fraunhofer.iosb.ilt.faaast.service.config.fixtures;
 
+import de.fraunhofer.iosb.ilt.faaast.service.assetconnection.AssetProviderConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.assetconnection.AssetSubscriptionProviderConfig;
 import java.util.Objects;
 
@@ -63,6 +64,12 @@ public class DummySubscriptionBasedProviderConfig implements AssetSubscriptionPr
         final DummySubscriptionBasedProviderConfig other = (DummySubscriptionBasedProviderConfig) obj;
         return Objects.equals(interval, other.interval)
                 && Objects.equals(this.nodeId, other.nodeId);
+    }
+
+
+    @Override
+    public boolean sameAs(AssetProviderConfig other) {
+        return equals(other);
     }
 
 }

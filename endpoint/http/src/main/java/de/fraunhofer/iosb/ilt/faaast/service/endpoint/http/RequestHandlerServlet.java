@@ -16,19 +16,14 @@ package de.fraunhofer.iosb.ilt.faaast.service.endpoint.http;
 
 import de.fraunhofer.iosb.ilt.faaast.service.ServiceContext;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.exception.MethodNotAllowedException;
-import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.exception.UnauthorizedException;
-import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.model.HttpMethod;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.model.HttpRequest;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.request.RequestMappingManager;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.response.ResponseMappingManager;
-import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.security.filter.ApiGateway;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.serialization.HttpJsonApiSerializer;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.util.HttpHelper;
-import de.fraunhofer.iosb.ilt.faaast.service.model.api.response.aasrepository.GetAllAssetAdministrationShellsResponse;
-import de.fraunhofer.iosb.ilt.faaast.service.model.api.response.submodel.GetSubmodelResponse;
-import de.fraunhofer.iosb.ilt.faaast.service.model.api.response.submodelrepository.GetAllSubmodelsResponse;
 import de.fraunhofer.iosb.ilt.faaast.service.model.exception.InvalidRequestException;
 import de.fraunhofer.iosb.ilt.faaast.service.model.exception.ResourceNotFoundException;
+import de.fraunhofer.iosb.ilt.faaast.service.model.http.HttpMethod;
 import de.fraunhofer.iosb.ilt.faaast.service.util.Ensure;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -56,7 +51,6 @@ public class RequestHandlerServlet extends HttpServlet {
     private final RequestMappingManager requestMappingManager;
     private final ResponseMappingManager responseMappingManager;
     private final HttpJsonApiSerializer serializer;
-    private final ApiGateway apiGateway;
 
     public RequestHandlerServlet(HttpEndpoint endpoint, HttpEndpointConfig config, ServiceContext serviceContext) {
         Ensure.requireNonNull(endpoint, "endpoint must be non-null");
@@ -68,7 +62,6 @@ public class RequestHandlerServlet extends HttpServlet {
         this.requestMappingManager = new RequestMappingManager(serviceContext);
         this.responseMappingManager = new ResponseMappingManager(serviceContext);
         this.serializer = new HttpJsonApiSerializer();
-        this.apiGateway = Objects.nonNull(config.getAclFolder()) ? new ApiGateway(config.getAclFolder()) : null;
     }
 
 
@@ -79,10 +72,10 @@ public class RequestHandlerServlet extends HttpServlet {
 
     @Override
     protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        if (!request.getRequestURI().startsWith(HttpEndpoint.getVersionPrefix())) {
+        if (!request.getRequestURI().startsWith(endpoint.getPathPrefix())) {
             doThrow(new ResourceNotFoundException(String.format("Resource not found '%s'", request.getRequestURI())));
         }
-        String url = request.getRequestURI().replaceFirst(HttpEndpoint.getVersionPrefix(), "");
+        String url = request.getRequestURI().replaceFirst(endpoint.getPathPrefix(), "");
         HttpMethod method = null;
         try {
             method = HttpMethod.valueOf(request.getMethod());
@@ -104,7 +97,7 @@ public class RequestHandlerServlet extends HttpServlet {
                                 request::getHeader)))
                 .build();
         try {
-            executeAndSend(request, response, requestMappingManager.map(httpRequest));
+            executeAndSend(response, requestMappingManager.map(httpRequest));
         }
         catch (Exception e) {
             doThrow(e);
@@ -127,20 +120,12 @@ public class RequestHandlerServlet extends HttpServlet {
     }
 
 
-    private void executeAndSend(HttpServletRequest request, HttpServletResponse response,
-                                de.fraunhofer.iosb.ilt.faaast.service.model.api.Request<? extends Response> apiRequest)
-            throws Exception {
+    private void executeAndSend(HttpServletResponse response, de.fraunhofer.iosb.ilt.faaast.service.model.api.Request<? extends Response> apiRequest) throws Exception {
         if (Objects.isNull(apiRequest)) {
             throw new InvalidRequestException("empty API request");
         }
         checkRequestSupportedByProfiles(apiRequest);
-        de.fraunhofer.iosb.ilt.faaast.service.model.api.Response apiResponse = null;
-        if (Objects.nonNull(apiGateway)) {
-            apiResponse = handleResponseWithAcl(request, apiRequest);
-        }
-        else {
-            apiResponse = serviceContext.execute(endpoint, apiRequest);
-        }
+        de.fraunhofer.iosb.ilt.faaast.service.model.api.Response apiResponse = serviceContext.execute(endpoint, apiRequest);
         if (Objects.isNull(apiResponse)) {
             throw new ServletException("empty API response");
         }
@@ -162,34 +147,6 @@ public class RequestHandlerServlet extends HttpServlet {
                         .stream()
                         .map(message -> message.getMessageType())
                         .noneMatch(x -> Objects.equals(x, MessageTypeEnum.ERROR) || Objects.equals(x, MessageTypeEnum.EXCEPTION));
-    }
-
-
-    private de.fraunhofer.iosb.ilt.faaast.service.model.api.Response handleResponseWithAcl(HttpServletRequest request,
-                                                                                           de.fraunhofer.iosb.ilt.faaast.service.model.api.Request<? extends Response> apiRequest)
-            throws ServletException {
-        String url = request.getRequestURI();
-        if ((url.equals("/shells") || url.equals("/shells/")) && request.getMethod().equals("GET")) {
-            GetAllAssetAdministrationShellsResponse aasResponse = (GetAllAssetAdministrationShellsResponse) serviceContext.execute(endpoint, apiRequest);;
-            return apiGateway.filterAas(request, aasResponse);
-        }
-        else if ((url.equals("/submodels/") || url.equals("/submodels")) && request.getMethod().equals("GET")) {
-            GetAllSubmodelsResponse submodelsResponse = (GetAllSubmodelsResponse) serviceContext.execute(endpoint, apiRequest);;
-            return apiGateway.filterSubmodels(request, submodelsResponse);
-        }
-        else if ((url.matches("^/submodels/[^/]+$")) && request.getMethod().equals("GET")) {
-            GetSubmodelResponse submodelResponse = (GetSubmodelResponse) serviceContext.execute(endpoint, apiRequest);;
-            if (!apiGateway.filterSubmodel(request, submodelResponse)) {
-                doThrow(new UnauthorizedException(
-                        String.format("User not authorized '%s'", request.getRequestURI())));
-            }
-            return submodelResponse;
-        }
-        else if (!apiGateway.isAuthorized(request)) {
-            doThrow(new UnauthorizedException(
-                    String.format("User not authorized '%s'", request.getRequestURI())));
-        }
-        return serviceContext.execute(endpoint, apiRequest);
     }
 
 }

@@ -42,18 +42,19 @@ import org.eclipse.digitaltwin.aas4j.v3.model.impl.DefaultSpecificAssetId;
 
 public class ApiPaths {
 
-    private static final String API_PREFIX = "/api/v3.0";
     private final String host;
     private final int port;
+    private final String pathPrefix;
 
     public ApiPaths(String host, int port) {
         this.host = host;
         this.port = port;
+        this.pathPrefix = "/api/v3.0";
     }
 
 
     public String root() {
-        return String.format("%s:%d%s", host, port, API_PREFIX);
+        return String.format("%s:%d%s", host, port, pathPrefix);
     }
 
 
@@ -534,6 +535,11 @@ public class ApiPaths {
             return String.format("%s%s",
                     submodelElement(idShortPath),
                     content(content));
+        }
+
+
+        public String submodelElement(IdShortPath idShortPath, Content content) {
+            return submodelElement(idShortPath.toString(), content);
         }
 
 
