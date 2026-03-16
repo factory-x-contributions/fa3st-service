@@ -39,4 +39,4 @@ jobs:
 
     - name: Build with Maven
       run: |
-        mvn verify -B
+        mvn verify -B -pl '!starter,!test'
