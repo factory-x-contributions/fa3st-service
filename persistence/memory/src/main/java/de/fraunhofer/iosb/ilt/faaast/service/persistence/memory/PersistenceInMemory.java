@@ -80,7 +80,7 @@ import org.eclipse.digitaltwin.aas4j.v3.model.impl.DefaultSpecificAssetId;
 
 
 /**
- * Implementation of {@link Persistence} for in memory storage.
+ * Implementation of {@link de.fraunhofer.iosb.ilt.faaast.service.persistence.Persistence} for in memory storage.
  *
  * <p>Following types are not supported in the current version:
  * <ul>
@@ -293,7 +293,7 @@ public class PersistenceInMemory implements Persistence<PersistenceInMemoryConfi
         }
         QueryEvaluator evaluator = new QueryEvaluator();
         if (query != null) {
-            result = result.filter(aas -> evaluator.matches(query.get$condition(), aas));
+            result = result.filter(cd -> evaluator.matches(query.get$condition(), cd));
         }
         return preparePagedResult(result, modifier, paging);
     }
@@ -375,7 +375,7 @@ public class PersistenceInMemory implements Persistence<PersistenceInMemoryConfi
         }
         QueryEvaluator evaluator = new QueryEvaluator();
         if (query != null) {
-            result = result.filter(aas -> evaluator.matches(query.get$condition(), aas));
+            result = result.filter(sm -> evaluator.matches(query.get$condition(), sm));
         }
         return preparePagedResult(result, modifier, paging);
     }

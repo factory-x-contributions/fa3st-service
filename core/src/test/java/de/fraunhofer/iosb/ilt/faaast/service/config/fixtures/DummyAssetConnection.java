@@ -134,7 +134,6 @@ public class DummyAssetConnection
     }
 
 
-    @Override
     public boolean sameAs(AssetConnection obj) {
         if (this == obj) {
             return true;
@@ -155,6 +154,12 @@ public class DummyAssetConnection
     @Override
     public void unregisterValueProvider(Reference reference) {
         throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+
+    @Override
+    public void stop() {
+        // no-op
     }
 
 }

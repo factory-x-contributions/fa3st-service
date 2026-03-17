@@ -97,4 +97,9 @@ public class CustomSubscriptionProviderConfig implements AssetSubscriptionProvid
         }
 
     }
+
+    @Override
+    public boolean sameAs(AssetProviderConfig other) {
+        return equals(other);
+    }
 }

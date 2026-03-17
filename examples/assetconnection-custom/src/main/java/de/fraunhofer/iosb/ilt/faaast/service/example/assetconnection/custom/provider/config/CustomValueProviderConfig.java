@@ -97,4 +97,10 @@ public class CustomValueProviderConfig implements AssetValueProviderConfig {
     public void setNote(String note) {
         this.note = note;
     }
+
+
+    @Override
+    public boolean sameAs(AssetProviderConfig other) {
+        return equals(other);
+    }
 }

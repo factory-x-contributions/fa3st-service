@@ -42,4 +42,18 @@ public class DummyAssetConnectionConfig
         this.port = port;
     }
 
+
+    @Override
+    public boolean equalsIgnoringProviders(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+        DummyAssetConnectionConfig other = (DummyAssetConnectionConfig) obj;
+        return port == other.port
+                && java.util.Objects.equals(host, other.host);
+    }
+
 }

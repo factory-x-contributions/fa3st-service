@@ -41,7 +41,6 @@ The `core` configuration block contains properties not related to the implementa
 | -------------------------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
 | aasRegistries<br>*(optional)*                | List<String>   | URLs of AAS registries to use (e.g., <https://example.com/api/v3.0>). If not set, no synchronization of AASs with registry happens.            | *empty*                         |
 | assetConnectionRetryInterval<br>*(optional)* | Long           | Interval in ms in which to retry establishing asset connections                                                                                 | 1000                            |
-| minInflateRatio<br>*(optional)*              | Double         | Ratio between de- and inflated bytes to detect zipbomb when loading AASX files                                                                  | 0.001                           |
 | requestHandlerThreadPoolSize<br>*(optional)* | Integer        | Number of concurrent thread that can execute API requests                                                                                       | 2                               |
 | registrySynchronization<br>*(optional)*      | Object         | Registry synchronization settings. Use `auth.header.name` and `auth.header.value` to add a static HTTP header to outgoing synchronization requests (only applied if both are set). | null |
 | submodelRegistries<br>*(optional)*           | List<String>   | URLs of submodels registries to use (e.g., <https://example.com/api/v3.0>). If not set, no synchronization of submodels with registry happens. | *empty*                         |
@@ -81,7 +80,6 @@ When FA³ST Service synchronizes its shells and submodels with AAS registries de
 			"http://example.com/MyAASRegistry"
 		],
 		"assetConnectionRetryInterval": 1000,
-		"minInflateRatio": 0.01,
 		"requestHandlerThreadPoolSize": 2,
 		"submodelRegistries": [
 			"http://example.com/MySubmodelRegistry"

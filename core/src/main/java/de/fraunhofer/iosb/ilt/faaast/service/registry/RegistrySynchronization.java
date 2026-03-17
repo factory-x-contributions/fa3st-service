@@ -227,11 +227,9 @@ public class RegistrySynchronization {
         }
         switch (key.getType()) {
             case ASSET_ADMINISTRATION_SHELL:
-                LOGGER.debug("Notifying shell registries {} of {}", coreConfig.getAasRegistries(), event.getClass().getSimpleName());
                 aasHandler.accept(key.getValue());
                 break;
             case SUBMODEL:
-                LOGGER.debug("Notifying submodel registries {} of {}", coreConfig.getSubmodelRegistries(), event.getClass().getSimpleName());
                 submodelHandler.accept(key.getValue());
                 break;
         }
