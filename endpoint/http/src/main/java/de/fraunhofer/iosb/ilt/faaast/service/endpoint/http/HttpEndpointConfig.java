@@ -44,6 +44,7 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
         return new Builder();
     }
 
+    private String aclFolder;
     private String callbackAddress;
     private CertificateConfig certificate;
     private boolean corsEnabled;
@@ -56,12 +57,14 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     private String hostname;
     private String pathPrefix;
     private boolean includeErrorDetails;
+    private String jwkProvider;
     private int port;
     private boolean sniEnabled;
     private boolean sslEnabled;
     private String subprotocol;
     private String subprotocolBody;
     private String subprotocolBodyEncoding;
+    private String tokenExchange;
 
     public HttpEndpointConfig() {
         certificate = CertificateConfig.builder()
@@ -264,6 +267,36 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
 
     public void setSubprotocolBodyEncoding(String subprotocolBodyEncoding) {
         this.subprotocolBodyEncoding = subprotocolBodyEncoding;
+    }
+
+
+    public String getJwkProvider() {
+        return jwkProvider;
+    }
+
+
+    public void setJwkProvider(String jwkProvider) {
+        this.jwkProvider = jwkProvider;
+    }
+
+
+    public String getAclFolder() {
+        return aclFolder;
+    }
+
+
+    public void setAclFolder(String aclFolder) {
+        this.aclFolder = aclFolder;
+    }
+
+
+    public String getTokenExchange() {
+        return tokenExchange;
+    }
+
+
+    public void setTokenExchange(String tokenExchange) {
+        this.tokenExchange = tokenExchange;
     }
 
 
