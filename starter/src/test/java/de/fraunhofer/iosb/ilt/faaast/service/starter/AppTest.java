@@ -389,12 +389,12 @@ public class AppTest {
 
     @Test
     public void testEndpointsCLI() {
-        var expected = List.of(EndpointType.HTTP, EndpointType.OPCUA);
+        var expected = List.of(EndpointType.HTTP);
 
-        executeAssertSuccess("--endpoint", "http", "--endpoint", "opcua");
+        executeAssertSuccess("--endpoint", "http");
         Assert.assertEquals(expected, application.endpoints);
 
-        executeAssertSuccess("--endpoint", "http,opcua");
+        executeAssertSuccess("--endpoint", "http");
         Assert.assertEquals(expected, application.endpoints);
     }
 

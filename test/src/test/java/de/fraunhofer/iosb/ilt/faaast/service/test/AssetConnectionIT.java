@@ -19,7 +19,6 @@ import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import com.prosysopc.ua.stack.core.UserTokenType;
 import de.fraunhofer.iosb.ilt.faaast.service.Service;
 import de.fraunhofer.iosb.ilt.faaast.service.assetconnection.AssetConnectionConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.assetconnection.AssetConnectionException;
@@ -34,7 +33,6 @@ import de.fraunhofer.iosb.ilt.faaast.service.config.ServiceConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.dataformat.DeserializationException;
 import de.fraunhofer.iosb.ilt.faaast.service.dataformat.SerializationException;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.HttpEndpointConfig;
-import de.fraunhofer.iosb.ilt.faaast.service.endpoint.opcua.OpcUaEndpointConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.exception.ConfigurationInitializationException;
 import de.fraunhofer.iosb.ilt.faaast.service.filestorage.memory.FileStorageInMemoryConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.messagebus.internal.MessageBusInternalConfig;
@@ -88,6 +86,7 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.json.JSONException;
 import org.junit.After;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -206,6 +205,7 @@ public class AssetConnectionIT extends AbstractIntegrationTest {
 
 
     @Test
+    @Ignore("opcua proprietary dependency only available in upstream")
     public void testServiceStartValidAssetConnection() throws Exception {
         int portHttp = PortHelper.findFreePort();
         int portOpcUa = PortHelper.findFreePort();
@@ -221,6 +221,7 @@ public class AssetConnectionIT extends AbstractIntegrationTest {
 
 
     @Test
+    @Ignore("opcua proprietary dependency only available in upstream")
     public void testAssetConnectionUpdateRuntime_addConnection() throws Exception {
         int portHttp = PortHelper.findFreePort();
         int portOpcUa = PortHelper.findFreePort();
@@ -239,6 +240,7 @@ public class AssetConnectionIT extends AbstractIntegrationTest {
 
 
     @Test
+    @Ignore("opcua proprietary dependency only available in upstream")
     public void testAssetConnectionUpdateRuntime_complexUpdate() throws Exception {
         int portHttp = PortHelper.findFreePort();
         int portOpcUa = PortHelper.findFreePort();
@@ -330,6 +332,7 @@ public class AssetConnectionIT extends AbstractIntegrationTest {
 
 
     @Test
+    @Ignore("opcua proprietary dependency only available in upstream")
     public void testServiceStartValidAssetConnectionDelayed() throws Exception {
         int portHttp = PortHelper.findFreePort();
         int portOpcUa = PortHelper.findFreePort();
@@ -415,10 +418,6 @@ public class AssetConnectionIT extends AbstractIntegrationTest {
                         .initialModel(DeepCopyHelper.deepCopy(environment))
                         .build())
                 .fileStorage(new FileStorageInMemoryConfig())
-                .endpoint(OpcUaEndpointConfig.builder()
-                        .tcpPort(portOpcUa)
-                        .supportedAuthentication(UserTokenType.Anonymous)
-                        .build())
                 .endpoint(HttpEndpointConfig.builder()
                         .port(portHttp)
                         .certificate(CertificateConfig.builder()
