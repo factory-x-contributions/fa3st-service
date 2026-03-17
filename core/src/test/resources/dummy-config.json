@@ -4,7 +4,6 @@
             {
                 "requestHandlerThreadPoolSize": 2,
                 "assetConnectionRetryInterval": 1000,
-                "minInflateRatio": 0.001,
                 "validationOnLoad":
                         {
                             "validateConstraints": true,
@@ -22,23 +21,21 @@
                             "validateConstraints": false,
                             "idShortUniqueness": true,
                             "identifierUniqueness": true
-                        }
+                        },
+                "minInflateRatio": 0.001
             },
     "assetConnections": [
         {
-            "@class": "de.fraunhofer.iosb.ilt.faaast.service.config.fixtures.DummyAssetConnection",
+            "@class": "de.fraunhofer.iosb.ilt.faaast.service.assetconnection.fixtures.foo.FooConnection",
             "valueProviders":
                     {
                         "[ModelRef](Property)Temperature":
                                 {
-                                    "inputValidationMode": "REQUIRE_PRESENT_OR_DEFAULT",
-                                    "inoutputValidationMode": "REQUIRE_PRESENT_OR_DEFAULT",
-                                    "outputValidationMode": "REQUIRE_PRESENT_OR_DEFAULT",
-                                    "nodeId": "some.opc.ua.node.id"
+                                    "property1": "some.opc.ua.node.id"
                                 }
                     },
-            "host": "tcp://localhost",
-            "port": 1234
+            "property1": "tcp://localhost",
+            "property2": 1234
         }
     ]
 }

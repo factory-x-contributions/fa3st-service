@@ -127,13 +127,6 @@ public class ReferenceCollector extends AssetAdministrationShellElementWalker {
 
 
     @Override
-    public void visit(AnnotatedRelationshipElement element) {
-        visitBefore(element);
-        visitAfter(element);
-    }
-
-
-    @Override
     public void visit(AssetInformation element) {
         visitBefore(element);
         visitAfter(element);
@@ -148,9 +141,14 @@ public class ReferenceCollector extends AssetAdministrationShellElementWalker {
 
 
     @Override
-    public void visit(Entity element) {
-        visitBefore(element);
-        visitAfter(element);
+    public void visit(Entity entity) {
+        visitBefore(entity);
+
+        if ((entity != null) && (entity.getStatements() != null)) {
+            entity.getStatements().forEach(this::visit);
+        }
+
+        visitAfter(entity);
     }
 
 
@@ -169,7 +167,9 @@ public class ReferenceCollector extends AssetAdministrationShellElementWalker {
                 || AssetAdministrationShell.class.isAssignableFrom(referable.getClass())
                 || Submodel.class.isAssignableFrom(referable.getClass())
                 || SubmodelElementCollection.class.isAssignableFrom(referable.getClass())
-                || SubmodelElementList.class.isAssignableFrom(referable.getClass());
+                || SubmodelElementList.class.isAssignableFrom(referable.getClass())
+                || Entity.class.isAssignableFrom(referable.getClass())
+                || AnnotatedRelationshipElement.class.isAssignableFrom(referable.getClass());
     }
 
 
@@ -178,12 +178,24 @@ public class ReferenceCollector extends AssetAdministrationShellElementWalker {
         visitBefore(submodelElementList);
         if (submodelElementList != null) {
             visit(submodelElementList.getSemanticId());
-            submodelElementList.getSupplementalSemanticIds().forEach(this::visit);
-            submodelElementList.getDescription().forEach(this::visit);
-            submodelElementList.getDisplayName().forEach(this::visit);
-            submodelElementList.getQualifiers().forEach(this::visit);
-            submodelElementList.getEmbeddedDataSpecifications().forEach(this::visit);
-            submodelElementList.getExtensions().forEach(this::visit);
+            if (submodelElementList.getSupplementalSemanticIds() != null) {
+                submodelElementList.getSupplementalSemanticIds().forEach(this::visit);
+            }
+            if (submodelElementList.getDescription() != null) {
+                submodelElementList.getDescription().forEach(this::visit);
+            }
+            if (submodelElementList.getDisplayName() != null) {
+                submodelElementList.getDisplayName().forEach(this::visit);
+            }
+            if (submodelElementList.getQualifiers() != null) {
+                submodelElementList.getQualifiers().forEach(this::visit);
+            }
+            if (submodelElementList.getEmbeddedDataSpecifications() != null) {
+                submodelElementList.getEmbeddedDataSpecifications().forEach(this::visit);
+            }
+            if (submodelElementList.getExtensions() != null) {
+                submodelElementList.getExtensions().forEach(this::visit);
+            }
             if (Objects.nonNull(submodelElementList.getValue())) {
                 for (int i = 0; i < submodelElementList.getValue().size(); i++) {
                     currentListIndex = i;

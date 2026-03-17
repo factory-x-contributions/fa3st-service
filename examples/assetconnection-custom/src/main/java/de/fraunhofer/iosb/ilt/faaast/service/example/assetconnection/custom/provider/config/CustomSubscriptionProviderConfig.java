@@ -14,6 +14,7 @@
  */
 package de.fraunhofer.iosb.ilt.faaast.service.example.assetconnection.custom.provider.config;
 
+import de.fraunhofer.iosb.ilt.faaast.service.assetconnection.AssetProviderConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.assetconnection.AssetSubscriptionProviderConfig;
 import org.eclipse.digitaltwin.aas4j.v3.model.builder.ExtendableBuilder;
 
@@ -56,5 +57,10 @@ public class CustomSubscriptionProviderConfig implements AssetSubscriptionProvid
             return getSelf();
         }
 
+    }
+
+    @Override
+    public boolean sameAs(AssetProviderConfig other) {
+        return equals(other);
     }
 }

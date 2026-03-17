@@ -17,7 +17,6 @@ package de.fraunhofer.iosb.ilt.faaast.service.endpoint.http;
 import de.fraunhofer.iosb.ilt.faaast.service.ServiceContext;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.exception.MethodNotAllowedException;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.exception.UnauthorizedException;
-import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.model.HttpMethod;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.model.HttpRequest;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.request.RequestMappingManager;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.response.ResponseMappingManager;
@@ -29,6 +28,7 @@ import de.fraunhofer.iosb.ilt.faaast.service.model.api.response.submodel.GetSubm
 import de.fraunhofer.iosb.ilt.faaast.service.model.api.response.submodelrepository.GetAllSubmodelsResponse;
 import de.fraunhofer.iosb.ilt.faaast.service.model.exception.InvalidRequestException;
 import de.fraunhofer.iosb.ilt.faaast.service.model.exception.ResourceNotFoundException;
+import de.fraunhofer.iosb.ilt.faaast.service.model.http.HttpMethod;
 import de.fraunhofer.iosb.ilt.faaast.service.util.Ensure;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -79,10 +79,10 @@ public class RequestHandlerServlet extends HttpServlet {
 
     @Override
     protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        if (!request.getRequestURI().startsWith(HttpEndpoint.getVersionPrefix())) {
+        if (!request.getRequestURI().startsWith(endpoint.getPathPrefix())) {
             doThrow(new ResourceNotFoundException(String.format("Resource not found '%s'", request.getRequestURI())));
         }
-        String url = request.getRequestURI().replaceFirst(HttpEndpoint.getVersionPrefix(), "");
+        String url = request.getRequestURI().replaceFirst(endpoint.getPathPrefix(), "");
         HttpMethod method = null;
         try {
             method = HttpMethod.valueOf(request.getMethod());
@@ -191,5 +191,4 @@ public class RequestHandlerServlet extends HttpServlet {
         }
         return serviceContext.execute(endpoint, apiRequest);
     }
-
 }

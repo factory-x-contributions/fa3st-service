@@ -30,21 +30,21 @@ public class CoreConfig {
     public static final CoreConfig DEFAULT = builder().build();
 
     private static final long DEFAULT_ASSET_CONNECTION_RETRY_INTERVAL = 1000;
-    private static final double DEFAULT_MIN_INFLATE_RATIO = 0.001;
     private static final int DEFAULT_REQUEST_HANDLER_THREADPOOL_SIZE = 1;
+    private static final double DEFAULT_MIN_INFLATE_RATIO = 0.001;
 
     private long assetConnectionRetryInterval;
-    private double minInflateRatio;
     private int requestHandlerThreadPoolSize;
     private ModelValidatorConfig validationOnLoad;
     private ModelValidatorConfig validationOnCreate;
     private ModelValidatorConfig validationOnUpdate;
     private List<String> aasRegistries;
     private List<String> submodelRegistries;
+    private RegistrySynchronizationConfig registrySynchronization;
+    private double minInflateRatio;
 
     public CoreConfig() {
         this.assetConnectionRetryInterval = DEFAULT_ASSET_CONNECTION_RETRY_INTERVAL;
-        this.minInflateRatio = DEFAULT_MIN_INFLATE_RATIO;
         this.requestHandlerThreadPoolSize = DEFAULT_REQUEST_HANDLER_THREADPOOL_SIZE;
         this.validationOnLoad = ModelValidatorConfig.builder()
                 .validateConstraints(true)
@@ -63,6 +63,7 @@ public class CoreConfig {
                 .build();
         this.aasRegistries = new ArrayList<>();
         this.submodelRegistries = new ArrayList<>();
+        this.minInflateRatio = DEFAULT_MIN_INFLATE_RATIO;
     }
 
 
@@ -78,16 +79,6 @@ public class CoreConfig {
 
     public void setAssetConnectionRetryInterval(long assetConnectionRetryInterval) {
         this.assetConnectionRetryInterval = assetConnectionRetryInterval;
-    }
-
-
-    public double getMinInflateRatio() {
-        return minInflateRatio;
-    }
-
-
-    public void setMinInflateRatio(double minInflateRatio) {
-        this.minInflateRatio = minInflateRatio;
     }
 
 
@@ -151,16 +142,47 @@ public class CoreConfig {
     }
 
 
+    /**
+     * Gets configuration for registry synchronization.
+     *
+     * @return registry synchronization configuration or {@code null} if not configured
+     */
+    public RegistrySynchronizationConfig getRegistrySynchronization() {
+        return registrySynchronization;
+    }
+
+
+    /**
+     * Sets configuration for registry synchronization.
+     *
+     * @param registrySynchronization registry synchronization configuration or {@code null} to disable
+     */
+    public void setRegistrySynchronization(RegistrySynchronizationConfig registrySynchronization) {
+        this.registrySynchronization = registrySynchronization;
+    }
+
+
+    public double getMinInflateRatio() {
+        return minInflateRatio;
+    }
+
+
+    public void setMinInflateRatio(double minInflateRatio) {
+        this.minInflateRatio = minInflateRatio;
+    }
+
+
     @Override
     public int hashCode() {
         return Objects.hash(assetConnectionRetryInterval,
-                minInflateRatio,
                 requestHandlerThreadPoolSize,
                 validationOnLoad,
                 validationOnCreate,
                 validationOnUpdate,
                 aasRegistries,
-                submodelRegistries);
+                submodelRegistries,
+                registrySynchronization,
+                minInflateRatio);
     }
 
 
@@ -177,13 +199,14 @@ public class CoreConfig {
         }
         final CoreConfig other = (CoreConfig) obj;
         return Objects.equals(this.assetConnectionRetryInterval, other.assetConnectionRetryInterval)
-                && Objects.equals(this.minInflateRatio, other.minInflateRatio)
                 && Objects.equals(this.requestHandlerThreadPoolSize, other.requestHandlerThreadPoolSize)
                 && Objects.equals(this.validationOnLoad, other.validationOnLoad)
                 && Objects.equals(this.validationOnCreate, other.validationOnCreate)
                 && Objects.equals(this.validationOnUpdate, other.validationOnUpdate)
                 && Objects.equals(this.aasRegistries, other.aasRegistries)
-                && Objects.equals(this.submodelRegistries, other.submodelRegistries);
+                && Objects.equals(this.submodelRegistries, other.submodelRegistries)
+                && Objects.equals(this.registrySynchronization, other.registrySynchronization)
+                && Objects.equals(this.minInflateRatio, other.minInflateRatio);
     }
 
     public static class Builder extends ExtendableBuilder<CoreConfig, Builder> {
@@ -196,12 +219,6 @@ public class CoreConfig {
 
         public Builder assetConnectionRetryInterval(long value) {
             getBuildingInstance().setAssetConnectionRetryInterval(value);
-            return getSelf();
-        }
-
-
-        public Builder minInflateRatio(double value) {
-            getBuildingInstance().setMinInflateRatio(value);
             return getSelf();
         }
 
@@ -268,6 +285,18 @@ public class CoreConfig {
             getBuildingInstance().getValidationOnLoad().setValidateIdentifierUniqueness(value);
             getBuildingInstance().getValidationOnCreate().setValidateIdentifierUniqueness(value);
             getBuildingInstance().getValidationOnUpdate().setValidateIdentifierUniqueness(value);
+            return getSelf();
+        }
+
+
+        public Builder minInflateRatio(double value) {
+            getBuildingInstance().setMinInflateRatio(value);
+            return getSelf();
+        }
+
+
+        public Builder registrySynchronization(RegistrySynchronizationConfig value) {
+            getBuildingInstance().setRegistrySynchronization(value);
             return getSelf();
         }
 

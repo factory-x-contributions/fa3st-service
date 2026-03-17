@@ -62,7 +62,7 @@ import org.slf4j.LoggerFactory;
 
 
 /**
- * Implementation of {@link Persistence} for a file storage.
+ * Implementation of {@link de.fraunhofer.iosb.ilt.faaast.service.persistence.Persistence} for a file storage.
  *
  * <p>Following types are not supported in the current version:
  * <ul>
@@ -181,7 +181,8 @@ public class PersistenceFile implements Persistence<PersistenceFileConfig> {
 
     @Override
     public Page<AssetAdministrationShell> findAssetAdministrationShellsWithQuery(AssetAdministrationShellSearchCriteria criteria, QueryModifier modifier, PagingInfo paging,
-                                                                                 Query query) {
+                                                                                 Query query)
+            throws PersistenceException {
         return persistence.findAssetAdministrationShellsWithQuery(criteria, modifier, paging, query);
     }
 
