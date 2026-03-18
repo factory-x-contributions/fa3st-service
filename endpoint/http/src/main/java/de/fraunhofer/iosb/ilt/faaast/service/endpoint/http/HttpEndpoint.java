@@ -52,6 +52,7 @@ import org.eclipse.digitaltwin.aas4j.v3.model.impl.DefaultEndpoint;
 import org.eclipse.digitaltwin.aas4j.v3.model.impl.DefaultProtocolInformation;
 import org.eclipse.digitaltwin.aas4j.v3.model.impl.DefaultSecurityAttributeObject;
 import org.eclipse.jetty.ee10.servlet.ServletContextHandler;
+import org.eclipse.jetty.http.HttpScheme;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.SecureRequestCustomizer;
@@ -288,10 +289,10 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
 
 
     private org.eclipse.digitaltwin.aas4j.v3.model.Endpoint endpointFor(Interface iface, String path, String identifiableId) {
-        URI endpointUri = buildUri(getEndpointUri().toString(), getPathPrefix(), path);
+        URI endpointUri = buildUri(getEndpointUri(), path);
 
         if (iface == Interface.SUBMODEL || iface == Interface.AAS) {
-            endpointUri = buildUri(endpointUri.toString(), EncodingHelper.base64UrlEncode(identifiableId));
+            endpointUri = buildUri(endpointUri, EncodingHelper.base64UrlEncode(identifiableId));
         }
 
         return new DefaultEndpoint.Builder()
@@ -326,7 +327,7 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
         try {
             if (Objects.nonNull(config.getCallbackAddress())) {
                 result = buildUri(
-                        config.getCallbackAddress(),
+                        URI.create(config.getCallbackAddress()),
                         // server URI path comes before configured prefix
                         result.getPath(),
                         config.getPathPrefix());
@@ -351,8 +352,15 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
     }
 
 
-    private URI buildUri(String base, String... paths) {
-        String safeBase = base.endsWith("/") ? base : base.concat("/");
+    private URI buildUri(URI base, String... paths) {
+        URI safeBase = base;
+        String scheme = safeBase.getScheme();
+        // callback address can only have http(s) for HTTP endpoint
+        if (scheme == null || !(scheme.equals(HttpScheme.HTTPS.toString()) || scheme.equals(HttpScheme.HTTP.toString()))) {
+            safeBase = URI.create(HttpScheme.HTTPS.toString().concat("://").concat(safeBase.toString()));
+        }
+        safeBase = safeBase.toString().endsWith("/") ? safeBase : URI.create(safeBase.toString().concat("/"));
+
         StringBuilder safePathBuilder = new StringBuilder();
         for (String path: paths) {
             if (path == null || path.isBlank()) {
@@ -360,13 +368,17 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
             }
             safePathBuilder.append(path.startsWith("/") ? path : path.concat("/"));
         }
+
         String safePath = safePathBuilder.toString();
-        if (safePath.startsWith("/")) {
+
+        safePath = safePath.replace("//", "/");
+
+        while (safePath.startsWith("/")) {
             safePath = safePath.substring(1);
         }
 
         // Remove leading slash again
-        return URI.create(safeBase).resolve(safePath);
+        return safeBase.resolve(safePath);
     }
 
 
