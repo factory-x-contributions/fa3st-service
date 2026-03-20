@@ -52,7 +52,6 @@ import org.eclipse.digitaltwin.aas4j.v3.model.impl.DefaultEndpoint;
 import org.eclipse.digitaltwin.aas4j.v3.model.impl.DefaultProtocolInformation;
 import org.eclipse.digitaltwin.aas4j.v3.model.impl.DefaultSecurityAttributeObject;
 import org.eclipse.jetty.ee10.servlet.ServletContextHandler;
-import org.eclipse.jetty.http.HttpScheme;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.SecureRequestCustomizer;

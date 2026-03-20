@@ -929,13 +929,13 @@ public abstract class AbstractHttpEndpointTest {
 
 
     protected ContentResponse execute(
-            HttpMethod method,
-            String path,
-            Map<String, String> parameters,
-            Content content,
-            String body,
-            String contentType,
-            Map<String, String> headers)
+                                      HttpMethod method,
+                                      String path,
+                                      Map<String, String> parameters,
+                                      Content content,
+                                      String body,
+                                      String contentType,
+                                      Map<String, String> headers)
             throws Exception {
         String actualPath = path;
         if (Objects.nonNull(content) && !Objects.equals(content, Content.NORMAL)) {
