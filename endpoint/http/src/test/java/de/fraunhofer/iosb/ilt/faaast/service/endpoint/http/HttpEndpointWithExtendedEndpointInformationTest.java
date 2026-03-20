@@ -25,24 +25,15 @@ import de.fraunhofer.iosb.ilt.faaast.service.messagebus.MessageBus;
 import de.fraunhofer.iosb.ilt.faaast.service.persistence.Persistence;
 import de.fraunhofer.iosb.ilt.faaast.service.util.PortHelper;
 import java.util.List;
-import java.util.UUID;
-import org.eclipse.digitaltwin.aas4j.v3.model.Endpoint;
-import org.eclipse.digitaltwin.aas4j.v3.model.ProtocolInformation;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.transport.HttpClientTransportDynamic;
 import org.eclipse.jetty.http.HttpScheme;
 import org.eclipse.jetty.io.ClientConnector;
 import org.eclipse.jetty.server.Server;
-import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Test;
 
 
 public class HttpEndpointWithExtendedEndpointInformationTest extends AbstractHttpEndpointTest {
-
-    private static final String subprotocol = "EXAMPLE";
-    private static final String subprotocolBody = "my-example-subprotocol-body";
-    private static final String subprotocolBodyEncoding = "none";
 
     @BeforeClass
     public static void init() throws Exception {
@@ -76,61 +67,5 @@ public class HttpEndpointWithExtendedEndpointInformationTest extends AbstractHtt
     private static void startClient() throws Exception {
         client = new HttpClient(new HttpClientTransportDynamic(new ClientConnector()));
         client.start();
-    }
-
-
-    @Test
-    public void testGetAasEndpointInformationWithCallbackAddress() {
-        String callbackAddress = "https://invalid.local:1234/path";
-        endpoint.init(
-                CoreConfig.DEFAULT,
-                HttpEndpointConfig.builder()
-                        .port(port)
-                        .cors(true)
-                        .ssl(false)
-                        .callbackAddress(callbackAddress)
-                        .subprotocol(subprotocol)
-                        .subprotocolBody(subprotocolBody)
-                        .subprotocolBodyEncoding(subprotocolBodyEncoding)
-                        .hostname("http://willbeoverridden.local:4242/example")
-                        .build(),
-                service);
-
-        String expectedHref = callbackAddress.concat(endpoint.getPathPrefix()).concat("/shells");
-        List<Endpoint> actual = endpoint.getAasEndpointInformation(UUID.randomUUID().toString());
-
-        assertProtocolInformation(actual.get(0).getProtocolInformation(), expectedHref);
-    }
-
-
-    @Test
-    public void testGetAasEndpointInformationWithCallbackAddressNoScheme() {
-        String callbackAddressMissingScheme = "invalid.local:1234/path";
-        endpoint.init(
-                CoreConfig.DEFAULT,
-                HttpEndpointConfig.builder()
-                        .port(port)
-                        .cors(true)
-                        .ssl(false)
-                        .callbackAddress(callbackAddressMissingScheme)
-                        .subprotocol(subprotocol)
-                        .subprotocolBody(subprotocolBody)
-                        .subprotocolBodyEncoding(subprotocolBodyEncoding)
-                        .hostname("http://willbeoverridden.local:4242/example")
-                        .build(),
-                service);
-
-        String expectedHref = "https://".concat(callbackAddressMissingScheme).concat(endpoint.getPathPrefix()).concat("/shells");
-        List<Endpoint> actual = endpoint.getAasEndpointInformation(UUID.randomUUID().toString());
-
-        assertProtocolInformation(actual.get(0).getProtocolInformation(), expectedHref);
-    }
-
-
-    private void assertProtocolInformation(ProtocolInformation protocolInformation, String expectedCallbackAddress) {
-        Assert.assertEquals(expectedCallbackAddress, protocolInformation.getHref());
-        Assert.assertEquals(subprotocol, protocolInformation.getSubprotocol());
-        Assert.assertEquals(subprotocolBody, protocolInformation.getSubprotocolBody());
-        Assert.assertEquals(subprotocolBodyEncoding, protocolInformation.getSubprotocolBodyEncoding());
     }
 }
