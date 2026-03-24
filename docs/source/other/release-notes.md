@@ -30,6 +30,37 @@
 	- Added processor for SMT Asset Interfaces Description (AID) and Asset Interfaces Mapping Configuration (AIMC), allowing to create/update/delete asset connections on-the-fly
 
 
+<!--start:changelog-header-->
+## 1.4.0-SNAPSHOT (current development version)<!--end:changelog-header-->
+
+**Internal changes & bugfixes**
+- General
+	- Fixed bug that incorrectly removed submodel reference from AAS when updating a submodel via PUT /submodels/{submodelId}
+	- Better failure logging in the registry synchronization component: Log error responses from AAS/Submodel registries
+	- Fix idShortPaths to support Entity and AnnotatedRelationshipElement
+    - Fix inconsistencies between docs and proprietary API: DELETE /reset resets the server, POST /import imports an AAS file, /upload was removed from docs
+    - Fix incorrect triggering of ValueChanged events when a value did in fact not change.
+    - Fix ElementDelete events not being triggered on DELETE /reset.
+- Asset Connection
+	- OPC UA
+		- When connecting to an OPC UA asset and the discovery service returns mutliple URLs to use, the ones with a reachable host are preferred.
+- Endpoint
+	- HTTP
+		- URL prefix /api/v3.x is now optional
+- SMT Processor
+	- AID/AIMC
+		- Fixed bug that prevented to update asset connection providers are runtime
+		- Fixed bug that prevented subscription providers to not be properly stopped
+
+## 1.3.0
+
+**New Features & Major Changes**
+- General
+	- New interface `SubmodelTemplateProcessor` that enables handling of SMTs
+- SubmodelTemplateProcessors
+	- Added processor for SMT Asset Interfaces Description (AID) and Asset Interfaces Mapping Configuration (AIMC), allowing to create/update/delete asset connections on-the-fly
+
+
 **Internal changes & bugfixes**
 - General
 	- Fixed bug that auxiliary files were not loaded when starting from code with an initial model file
