@@ -23,4 +23,15 @@ import de.fraunhofer.iosb.ilt.faaast.service.example.assetconnection.custom.prov
 public class CustomAssetConnectionConfig
         extends AssetConnectionConfig<CustomAssetConnection, CustomValueProviderConfig, CustomOperationProviderConfig, CustomSubscriptionProviderConfig> {
 
+    @Override
+    public boolean equalsIgnoringProviders(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+        return true;
+    }
+
 }

@@ -16,6 +16,7 @@ package de.fraunhofer.iosb.ilt.faaast.service.endpoint.http;
 
 import de.fraunhofer.iosb.ilt.faaast.service.config.CertificateConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.EndpointConfig;
+import de.fraunhofer.iosb.ilt.faaast.service.util.Ensure;
 import java.util.Objects;
 
 
@@ -31,20 +32,20 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     public static final String DEFAULT_CORS_ALLOWED_ORIGIN = "*";
     public static final String DEFAULT_CORS_EXPOSED_HEADERS = "";
     public static final long DEFAULT_CORS_MAX_AGE = 3600;
-    public static final String DEFAULT_HOSTNAME = null;
-    public static final String DEFAULT_CALLBACK_ADDRESS = null;
+    public static final String DEFAULT_PATH_PREFIX = "/api/v3.0";
     public static final boolean DEFAULT_INCLUDE_ERROR_DETAILS = false;
     public static final int DEFAULT_PORT = 443;
     public static final boolean DEFAULT_SNI_ENABLED = true;
     public static final boolean DEFAULT_SSL_ENABLED = true;
-    public static final String DEFAULT_SUBPROTOCOL = null;
-    public static final String DEFAULT_SUBPROTOCOL_BODY = null;
-    public static final String DEFAULT_SUBPROTOCOL_BODY_ENCODING = null;
+
+    private static final String PATH_PREFIX_REGEX = "^(?:$|/|/.*[^/])$";
 
     public static Builder builder() {
         return new Builder();
     }
 
+    private String aclFolder;
+    private String callbackAddress;
     private CertificateConfig certificate;
     private boolean corsEnabled;
     private boolean corsAllowCredentials;
@@ -54,17 +55,16 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     private String corsExposedHeaders;
     private long corsMaxAge;
     private String hostname;
+    private String pathPrefix;
     private boolean includeErrorDetails;
+    private String jwkProvider;
     private int port;
     private boolean sniEnabled;
     private boolean sslEnabled;
     private String subprotocol;
     private String subprotocolBody;
     private String subprotocolBodyEncoding;
-    private String shellCallbackAddress;
-    private String submodelCallbackAddress;
-    private String jwkProvider;
-    private String aclFolder;
+    private String tokenExchange;
 
     public HttpEndpointConfig() {
         certificate = CertificateConfig.builder()
@@ -76,16 +76,21 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
         corsAllowedOrigin = DEFAULT_CORS_ALLOWED_ORIGIN;
         corsExposedHeaders = DEFAULT_CORS_EXPOSED_HEADERS;
         corsMaxAge = DEFAULT_CORS_MAX_AGE;
-        hostname = DEFAULT_HOSTNAME;
-        shellCallbackAddress = DEFAULT_CALLBACK_ADDRESS;
-        submodelCallbackAddress = DEFAULT_CALLBACK_ADDRESS;
-        subprotocolBodyEncoding = DEFAULT_SUBPROTOCOL_BODY_ENCODING;
+        pathPrefix = DEFAULT_PATH_PREFIX;
         includeErrorDetails = DEFAULT_INCLUDE_ERROR_DETAILS;
         port = DEFAULT_PORT;
         sniEnabled = DEFAULT_SNI_ENABLED;
         sslEnabled = DEFAULT_SSL_ENABLED;
-        subprotocol = DEFAULT_SUBPROTOCOL;
-        subprotocolBody = DEFAULT_SUBPROTOCOL_BODY;
+    }
+
+
+    public String getCallbackAddress() {
+        return callbackAddress;
+    }
+
+
+    public void setCallbackAddress(String callbackAddress) {
+        this.callbackAddress = callbackAddress;
     }
 
 
@@ -179,23 +184,19 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     }
 
 
-    public String getShellCallbackAddress() {
-        return shellCallbackAddress;
+    public String getPathPrefix() {
+        return pathPrefix;
     }
 
 
-    public void setShellCallbackAddress(String shellCallbackAddress) {
-        this.shellCallbackAddress = shellCallbackAddress;
-    }
-
-
-    public String getSubmodelCallbackAddress() {
-        return submodelCallbackAddress;
-    }
-
-
-    public void setSubmodelCallbackAddress(String submodelCallbackAddress) {
-        this.submodelCallbackAddress = submodelCallbackAddress;
+    /**
+     * Sets the path prefix of this endpoint. The path prefix must start with a "/" and not end with a "/".
+     *
+     * @param pathPrefix The path prefix used for HTTP requests to this endpoint.
+     */
+    public void setPathPrefix(String pathPrefix) {
+        validatePathPrefix(pathPrefix);
+        this.pathPrefix = pathPrefix;
     }
 
 
@@ -289,6 +290,16 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     }
 
 
+    public String getTokenExchange() {
+        return tokenExchange;
+    }
+
+
+    public void setTokenExchange(String tokenExchange) {
+        this.tokenExchange = tokenExchange;
+    }
+
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -299,6 +310,7 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
         }
         HttpEndpointConfig that = (HttpEndpointConfig) o;
         return super.equals(o)
+                && Objects.equals(callbackAddress, that.callbackAddress)
                 && Objects.equals(certificate, that.certificate)
                 && Objects.equals(corsEnabled, that.corsEnabled)
                 && Objects.equals(corsAllowCredentials, that.corsAllowCredentials)
@@ -308,20 +320,14 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
                 && Objects.equals(corsExposedHeaders, that.corsExposedHeaders)
                 && Objects.equals(corsMaxAge, that.corsMaxAge)
                 && Objects.equals(hostname, that.hostname)
-                && Objects.equals(shellCallbackAddress, that.shellCallbackAddress)
-                && Objects.equals(submodelCallbackAddress, that.submodelCallbackAddress)
+                && Objects.equals(pathPrefix, that.pathPrefix)
                 && Objects.equals(includeErrorDetails, that.includeErrorDetails)
                 && Objects.equals(port, that.port)
                 && Objects.equals(sniEnabled, that.sniEnabled)
-                && Objects.equals(sslEnabled, that.sslEnabled)
+                && Objects.equals(profiles, that.profiles)
                 && Objects.equals(subprotocol, that.subprotocol)
                 && Objects.equals(subprotocolBody, that.subprotocolBody)
-                && Objects.equals(subprotocolBodyEncoding, that.subprotocolBodyEncoding)
-                && Objects.equals(certificate, that.certificate)
-                && Objects.equals(hostname, that.hostname)
-                && Objects.equals(jwkProvider, that.jwkProvider)
-                && Objects.equals(aclFolder, that.aclFolder)
-                && Objects.equals(profiles, that.profiles);
+                && Objects.equals(subprotocolBodyEncoding, that.subprotocolBodyEncoding);
     }
 
 
@@ -329,6 +335,7 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
     public int hashCode() {
         return Objects.hash(
                 super.hashCode(),
+                callbackAddress,
                 certificate,
                 corsEnabled,
                 corsAllowCredentials,
@@ -338,21 +345,30 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
                 corsExposedHeaders,
                 corsMaxAge,
                 hostname,
-                shellCallbackAddress,
-                submodelCallbackAddress,
+                pathPrefix,
                 includeErrorDetails,
                 port,
                 sniEnabled,
                 sslEnabled,
+                profiles,
                 subprotocol,
                 subprotocolBody,
-                subprotocolBodyEncoding,
-                jwkProvider,
-                aclFolder,
-                profiles);
+                subprotocolBodyEncoding);
+    }
+
+
+    private void validatePathPrefix(String pathPrefix) {
+        Ensure.require(pathPrefix.matches(PATH_PREFIX_REGEX),
+                String.format("%s.%s must match regex %s", this.getClass().getSimpleName(), "pathPrefix", PATH_PREFIX_REGEX));
     }
 
     private abstract static class AbstractBuilder<T extends HttpEndpointConfig, B extends AbstractBuilder<T, B>> extends EndpointConfig.AbstractBuilder<HttpEndpoint, T, B> {
+
+        public B callbackAddress(String value) {
+            getBuildingInstance().setCallbackAddress(value);
+            return getSelf();
+        }
+
 
         public B certificate(CertificateConfig value) {
             getBuildingInstance().setCertificate(value);
@@ -420,20 +436,8 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
         }
 
 
-        public B shellCallbackAddress(String shellCallbackAddress) {
-            getBuildingInstance().setShellCallbackAddress(shellCallbackAddress);
-            return getSelf();
-        }
-
-
-        public B submodelCallbackAddress(String submodelCallbackAddress) {
-            getBuildingInstance().setSubmodelCallbackAddress(submodelCallbackAddress);
-            return getSelf();
-        }
-
-
-        public B jwkProvider(String value) {
-            getBuildingInstance().setJwkProvider(value);
+        public B pathPrefix(String value) {
+            getBuildingInstance().setPathPrefix(value);
             return getSelf();
         }
 
@@ -480,26 +484,20 @@ public class HttpEndpointConfig extends EndpointConfig<HttpEndpoint> {
         }
 
 
-        public B subprotocol(String subprotocol) {
-            getBuildingInstance().setSubprotocol(subprotocol);
+        public B subprotocol(String value) {
+            getBuildingInstance().setSubprotocol(value);
             return getSelf();
         }
 
 
-        public B subprotocolBody(String subprotocolBody) {
-            getBuildingInstance().setSubprotocolBody(subprotocolBody);
+        public B subprotocolBody(String value) {
+            getBuildingInstance().setSubprotocolBody(value);
             return getSelf();
         }
 
 
-        public B subprotocolBodyEncoding(String subprotocolBodyEncoding) {
-            getBuildingInstance().setSubprotocolBodyEncoding(subprotocolBodyEncoding);
-            return getSelf();
-        }
-
-
-        public B aclFolder(String value) {
-            getBuildingInstance().setAclFolder(value);
+        public B subprotocolBodyEncoding(String value) {
+            getBuildingInstance().setSubprotocolBodyEncoding(value);
             return getSelf();
         }
     }

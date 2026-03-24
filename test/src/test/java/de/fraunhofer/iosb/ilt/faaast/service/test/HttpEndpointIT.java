@@ -18,17 +18,17 @@ import static de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.util.HttpHelpe
 import static de.fraunhofer.iosb.ilt.faaast.service.test.util.MessageBusHelper.DEFAULT_TIMEOUT;
 import static de.fraunhofer.iosb.ilt.faaast.service.test.util.MessageBusHelper.assertEvent;
 import static de.fraunhofer.iosb.ilt.faaast.service.test.util.MessageBusHelper.assertEvents;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.net.MediaType;
 import de.fraunhofer.iosb.ilt.faaast.service.Service;
-import de.fraunhofer.iosb.ilt.faaast.service.assetconnection.AbstractAssetOperationProviderConfig;
+import de.fraunhofer.iosb.ilt.faaast.service.assetconnection.ArgumentValidationMode;
 import de.fraunhofer.iosb.ilt.faaast.service.assetconnection.AssetConnectionException;
 import de.fraunhofer.iosb.ilt.faaast.service.assetconnection.AssetConnectionManager;
-import de.fraunhofer.iosb.ilt.faaast.service.assetconnection.AssetOperationProvider;
-import de.fraunhofer.iosb.ilt.faaast.service.assetconnection.AssetOperationProviderConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.config.CertificateConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.config.CoreConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.config.ServiceConfig;
@@ -39,7 +39,6 @@ import de.fraunhofer.iosb.ilt.faaast.service.dataformat.json.JsonApiSerializer;
 import de.fraunhofer.iosb.ilt.faaast.service.dataformat.json.ValueOnlyJsonSerializer;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.Endpoint;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.HttpEndpointConfig;
-import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.model.HttpMethod;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.util.HttpConstants;
 import de.fraunhofer.iosb.ilt.faaast.service.exception.MessageBusException;
 import de.fraunhofer.iosb.ilt.faaast.service.filestorage.FileStorage;
@@ -61,10 +60,8 @@ import de.fraunhofer.iosb.ilt.faaast.service.model.api.request.submodel.InvokeOp
 import de.fraunhofer.iosb.ilt.faaast.service.model.api.request.submodel.InvokeOperationSyncRequest;
 import de.fraunhofer.iosb.ilt.faaast.service.model.api.response.proprietary.ImportResult;
 import de.fraunhofer.iosb.ilt.faaast.service.model.exception.ResourceNotFoundException;
-import de.fraunhofer.iosb.ilt.faaast.service.model.exception.UnsupportedContentModifierException;
 import de.fraunhofer.iosb.ilt.faaast.service.model.exception.UnsupportedModifierException;
-import de.fraunhofer.iosb.ilt.faaast.service.model.exception.ValueFormatException;
-import de.fraunhofer.iosb.ilt.faaast.service.model.exception.ValueMappingException;
+import de.fraunhofer.iosb.ilt.faaast.service.model.http.HttpMethod;
 import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.EventMessage;
 import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.event.access.ElementReadEventMessage;
 import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.event.access.OperationFinishEventMessage;
@@ -76,7 +73,6 @@ import de.fraunhofer.iosb.ilt.faaast.service.model.serialization.DataFormat;
 import de.fraunhofer.iosb.ilt.faaast.service.persistence.Persistence;
 import de.fraunhofer.iosb.ilt.faaast.service.persistence.memory.PersistenceInMemoryConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.persistence.util.QueryModifierHelper;
-import de.fraunhofer.iosb.ilt.faaast.service.request.RequestHandlerManager;
 import de.fraunhofer.iosb.ilt.faaast.service.request.handler.StaticRequestExecutionContext;
 import de.fraunhofer.iosb.ilt.faaast.service.serialization.json.util.Path;
 import de.fraunhofer.iosb.ilt.faaast.service.test.util.ApiPaths;
@@ -91,6 +87,7 @@ import de.fraunhofer.iosb.ilt.faaast.service.util.FaaastConstants;
 import de.fraunhofer.iosb.ilt.faaast.service.util.LambdaExceptionHelper;
 import de.fraunhofer.iosb.ilt.faaast.service.util.PortHelper;
 import de.fraunhofer.iosb.ilt.faaast.service.util.ReferenceBuilder;
+import de.fraunhofer.iosb.ilt.faaast.service.util.ReferenceHelper;
 import de.fraunhofer.iosb.ilt.faaast.service.util.ReflectionHelper;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -110,10 +107,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.Duration;
@@ -123,12 +123,15 @@ import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.HttpEntity;
 import org.awaitility.Awaitility;
 import org.eclipse.digitaltwin.aas4j.v3.dataformat.aasx.InMemoryFile;
+import org.eclipse.digitaltwin.aas4j.v3.model.AnnotatedRelationshipElement;
 import org.eclipse.digitaltwin.aas4j.v3.model.AssetAdministrationShell;
 import org.eclipse.digitaltwin.aas4j.v3.model.AssetInformation;
 import org.eclipse.digitaltwin.aas4j.v3.model.BaseOperationResult;
 import org.eclipse.digitaltwin.aas4j.v3.model.Blob;
 import org.eclipse.digitaltwin.aas4j.v3.model.ConceptDescription;
+import org.eclipse.digitaltwin.aas4j.v3.model.DataElement;
 import org.eclipse.digitaltwin.aas4j.v3.model.DataTypeDefXsd;
+import org.eclipse.digitaltwin.aas4j.v3.model.Entity;
 import org.eclipse.digitaltwin.aas4j.v3.model.Environment;
 import org.eclipse.digitaltwin.aas4j.v3.model.ExecutionState;
 import org.eclipse.digitaltwin.aas4j.v3.model.Operation;
@@ -155,13 +158,14 @@ import org.eclipse.digitaltwin.aas4j.v3.model.impl.DefaultReference;
 import org.eclipse.digitaltwin.aas4j.v3.model.impl.DefaultResource;
 import org.eclipse.digitaltwin.aas4j.v3.model.impl.DefaultSpecificAssetId;
 import org.eclipse.digitaltwin.aas4j.v3.model.impl.DefaultSubmodel;
-import org.json.JSONException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.skyscreamer.jsonassert.JSONAssert;
 
 
@@ -181,10 +185,12 @@ public class HttpEndpointIT extends AbstractIntegrationTest {
     private static ApiPaths apiPaths;
     private static MessageBus messageBus;
     private static AssetConnectionManager assetConnectionManager;
-    private static RequestHandlerManager requestHandlerManager;
     private static final Path pathForTestSubmodel3 = Path.builder()
             .child("ExampleRelationshipElement")
-            .child("ExampleAnnotatedRelationshipElement")
+            .child(Path.builder()
+                    .id("ExampleAnnotatedRelationshipElement")
+                    .child("ExampleProperty3")
+                    .build())
             .child("ExampleOperation")
             .child("ExampleCapability")
             .child("ExampleBasicEvent")
@@ -276,21 +282,38 @@ public class HttpEndpointIT extends AbstractIntegrationTest {
     }
 
 
-    private void mockOperation(Reference reference, BiFunction<OperationVariable[], OperationVariable[], OperationVariable[]> logic) {
-        when(assetConnectionManager.hasOperationProvider(reference))
-                .thenReturn(true);
-        when(assetConnectionManager.getOperationProvider(reference))
-                .thenReturn(new AssetOperationProvider() {
-                    @Override
-                    public OperationVariable[] invoke(OperationVariable[] input, OperationVariable[] inoutput) throws AssetConnectionException {
-                        return logic.apply(input, inoutput);
-                    }
+    private void mockOperation(Reference reference, BiFunction<OperationVariable[], OperationVariable[], OperationVariable[]> logic) throws AssetConnectionException {
+        doReturn(true).when(assetConnectionManager).hasOperationProvider(reference);
+        doReturn(Optional.of(ArgumentValidationMode.REQUIRE_PRESENT_OR_DEFAULT)).when(assetConnectionManager).getOperationInputValidationMode(reference);
+        doReturn(Optional.of(ArgumentValidationMode.REQUIRE_PRESENT_OR_DEFAULT)).when(assetConnectionManager).getOperationInoutputValidationMode(reference);
+        doReturn(Optional.of(ArgumentValidationMode.REQUIRE_PRESENT_OR_DEFAULT)).when(assetConnectionManager).getOperationOutputValidationMode(reference);
+        doAnswer(call -> {
+            Reference actualReference = call.getArgument(0);
+            if (!ReferenceHelper.equals(reference, actualReference)) {
+                return Optional.empty();
+            }
+            OperationVariable[] input = call.getArgument(1);
+            OperationVariable[] inoutput = call.getArgument(2);
+            return Optional.of(logic.apply(input, inoutput));
+        }).when(assetConnectionManager).invoke(any(), any(), any());
 
-
-                    public AssetOperationProviderConfig getConfig() {
-                        return new AbstractAssetOperationProviderConfig() {};
-                    }
-                });
+        doAnswer((Answer<Void>) (InvocationOnMock invocation) -> {
+            Reference actualReference = invocation.getArgument(0);
+            OperationVariable[] input = invocation.getArgument(1);
+            OperationVariable[] inoutput = invocation.getArgument(2);
+            BiConsumer<OperationVariable[], OperationVariable[]> callbackSuccess = invocation.getArgument(3);
+            Consumer<Throwable> callbackFailure = invocation.getArgument(4);
+            if (ReferenceHelper.equals(reference, actualReference)) {
+                CompletableFuture
+                        .supplyAsync(LambdaExceptionHelper.rethrowSupplier(() -> logic.apply(input, inoutput)))
+                        .thenAccept(x -> callbackSuccess.accept(x, inoutput))
+                        .exceptionally(e -> {
+                            callbackFailure.accept(e);
+                            return null;
+                        });
+            }
+            return null;
+        }).when(assetConnectionManager).invokeAsync(any(), any(), any(), any(), any());
     }
 
 
@@ -1656,9 +1679,7 @@ public class HttpEndpointIT extends AbstractIntegrationTest {
 
 
     @Test
-    public void testSubmodelInterfaceInvokeOperationAsync()
-            throws IOException, DeserializationException, InterruptedException, URISyntaxException, SerializationException, MessageBusException, NoSuchAlgorithmException,
-            KeyManagementException, UnsupportedModifierException {
+    public void testSubmodelInterfaceInvokeOperationAsync() throws Exception {
         int inputValue = 4;
         Reference reference = operationSquareIdentifier.toReference();
         CountDownLatch condition = new CountDownLatch(1);
@@ -1667,13 +1688,12 @@ public class HttpEndpointIT extends AbstractIntegrationTest {
                 condition.await();
                 return operationSqaureDefaultImplementation(input, inoutput);
             }
-            catch (InterruptedException ex) {
-                throw new RuntimeException();
+            catch (InterruptedException e) {
+                throw new RuntimeException(e);
             }
         });
         AtomicReference<String> operationStatusUrl = new AtomicReference<>();
         // assert OperationStarted on messagebus
-
         assertEvent(
                 messageBus,
                 OperationInvokeEventMessage.class,
@@ -1807,9 +1827,7 @@ public class HttpEndpointIT extends AbstractIntegrationTest {
 
 
     @Test
-    public void testSubmodelInterfaceInvokeOperationAsyncValueOnly()
-            throws IOException, DeserializationException, InterruptedException, URISyntaxException, SerializationException, MessageBusException, NoSuchAlgorithmException,
-            KeyManagementException, JSONException, UnsupportedContentModifierException, UnsupportedModifierException {
+    public void testSubmodelInterfaceInvokeOperationAsyncValueOnly() throws Exception {
         int inputValue = 4;
 
         Reference reference = operationSquareIdentifier.toReference();
@@ -1897,9 +1915,7 @@ public class HttpEndpointIT extends AbstractIntegrationTest {
 
 
     @Test
-    public void testSubmodelInterfaceInvokeOperationSync()
-            throws IOException, DeserializationException, InterruptedException, URISyntaxException, SerializationException, MessageBusException, NoSuchAlgorithmException,
-            KeyManagementException, ValueFormatException, ValueMappingException {
+    public void testSubmodelInterfaceInvokeOperationSync() throws Exception {
         int inputValue = 4;
         Reference reference = operationSquareIdentifier.toReference();
         mockOperation(reference, HttpEndpointIT::operationSqaureDefaultImplementation);
@@ -1930,9 +1946,7 @@ public class HttpEndpointIT extends AbstractIntegrationTest {
 
 
     @Test
-    public void testSubmodelInterfaceInvokeOperationSyncValueOnly()
-            throws IOException, DeserializationException, InterruptedException, URISyntaxException, SerializationException, MessageBusException, NoSuchAlgorithmException,
-            KeyManagementException, ValueFormatException, ValueMappingException {
+    public void testSubmodelInterfaceInvokeOperationSyncValueOnly() throws Exception {
         int inputValue = 4;
         Reference reference = operationSquareIdentifier.toReference();
         mockOperation(reference, HttpEndpointIT::operationSqaureDefaultImplementation);
@@ -1967,9 +1981,7 @@ public class HttpEndpointIT extends AbstractIntegrationTest {
 
 
     @Test
-    public void testSubmodelInterfaceInvokeOperationSyncWithExceptionInOperation()
-            throws IOException, DeserializationException, InterruptedException, URISyntaxException, SerializationException, MessageBusException, NoSuchAlgorithmException,
-            KeyManagementException, ValueFormatException, ValueMappingException {
+    public void testSubmodelInterfaceInvokeOperationSyncWithExceptionInOperation() throws Exception {
         Reference reference = operationSquareIdentifier.toReference();
         mockOperation(reference, (input, inoutput) -> {
             throw new IllegalArgumentException();
@@ -2002,9 +2014,7 @@ public class HttpEndpointIT extends AbstractIntegrationTest {
 
 
     @Test
-    public void testSubmodelInterfaceInvokeOperationAsyncWithExceptionInOperation()
-            throws IOException, DeserializationException, InterruptedException, URISyntaxException, SerializationException, MessageBusException, NoSuchAlgorithmException,
-            KeyManagementException, ValueMappingException, UnsupportedModifierException {
+    public void testSubmodelInterfaceInvokeOperationAsyncWithExceptionInOperation() throws Exception {
         Reference reference = operationSquareIdentifier.toReference();
         mockOperation(reference, (input, inoutput) -> {
             throw new UnsupportedOperationException("not implemented");
@@ -2839,6 +2849,144 @@ public class HttpEndpointIT extends AbstractIntegrationTest {
 
         }
 
+    }
+
+
+    @Test
+    public void testSubmodelInterfaceCreateSubmodelElementInsideEntity()
+            throws IOException, DeserializationException, InterruptedException, URISyntaxException, SerializationException, MessageBusException, NoSuchAlgorithmException,
+            KeyManagementException {
+        Submodel submodel = environment.getSubmodels().get(1);
+        Entity entity = (Entity) submodel.getSubmodelElements().get(0);
+
+        String id = "newProperty";
+        SubmodelElement expected = new DefaultProperty.Builder()
+                .idShort(id)
+                .build();
+        assertEvent(
+                messageBus,
+                ElementCreateEventMessage.class,
+                expected,
+                LambdaExceptionHelper.wrap(
+                        x -> {
+                            var response = assertExecuteSingle(
+                                    HttpMethod.POST,
+                                    apiPaths.submodelRepository().submodelInterface(submodel).submodelElement(entity),
+                                    StatusCode.SUCCESS_CREATED,
+                                    expected,
+                                    expected,
+                                    SubmodelElement.class);
+                            Optional<String> location = response.headers().firstValue(LOCATION_HEADER);
+                            Assert.assertTrue(location.isPresent());
+                            Assert.assertEquals(String.format(".%s", id), location.get());
+                        }));
+        SubmodelElement actual = HttpHelper.getWithSingleResult(
+                httpClient,
+                apiPaths.submodelRepository()
+                        .submodelInterface(submodel)
+                        .submodelElement(IdShortPath.builder()
+                                .idShort(entity.getIdShort())
+                                .idShort(expected.getIdShort())
+                                .build()),
+                SubmodelElement.class);
+        Assert.assertEquals(expected, actual);
+    }
+
+
+    @Test
+    public void testSubmodelInterfaceCreateSubmodelElementInsideAnnotatedRelElem()
+            throws IOException, DeserializationException, InterruptedException, URISyntaxException, SerializationException, MessageBusException, NoSuchAlgorithmException,
+            KeyManagementException {
+        Submodel submodel = environment.getSubmodels().get(2);
+        AnnotatedRelationshipElement relElement = (AnnotatedRelationshipElement) submodel.getSubmodelElements().get(1);
+
+        String id = "newProperty";
+        SubmodelElement expected = new DefaultProperty.Builder()
+                .idShort(id)
+                .build();
+        assertEvent(
+                messageBus,
+                ElementCreateEventMessage.class,
+                expected,
+                LambdaExceptionHelper.wrap(
+                        x -> {
+                            var response = assertExecuteSingle(
+                                    HttpMethod.POST,
+                                    apiPaths.submodelRepository().submodelInterface(submodel).submodelElement(relElement),
+                                    StatusCode.SUCCESS_CREATED,
+                                    expected,
+                                    expected,
+                                    SubmodelElement.class);
+                            Optional<String> location = response.headers().firstValue(LOCATION_HEADER);
+                            Assert.assertTrue(location.isPresent());
+                            Assert.assertEquals(String.format(".%s", id), location.get());
+                        }));
+        SubmodelElement actual = HttpHelper.getWithSingleResult(
+                httpClient,
+                apiPaths.submodelRepository()
+                        .submodelInterface(submodel)
+                        .submodelElement(IdShortPath.builder()
+                                .idShort(relElement.getIdShort())
+                                .idShort(expected.getIdShort())
+                                .build()),
+                SubmodelElement.class);
+        Assert.assertEquals(expected, actual);
+    }
+
+
+    @Test
+    public void testSubmodelInterfaceDeleteSubmodelElementInsideEntity()
+            throws IOException, DeserializationException, InterruptedException, URISyntaxException, SerializationException, MessageBusException, NoSuchAlgorithmException,
+            KeyManagementException {
+        Submodel submodel = environment.getSubmodels().get(1);
+        Entity entity = (Entity) submodel.getSubmodelElements().get(0);
+        SubmodelElement expected = entity.getStatements().get(0);
+        Entity before = HttpHelper.getWithSingleResult(httpClient, apiPaths.submodelRepository().submodelInterface(submodel).submodelElement(entity.getIdShort()),
+                Entity.class);
+        Assert.assertTrue(before.getStatements().contains(expected));
+
+        assertEvent(
+                messageBus,
+                ElementDeleteEventMessage.class,
+                expected,
+                LambdaExceptionHelper.wrap(
+                        x -> assertExecute(
+                                HttpMethod.DELETE,
+                                apiPaths.submodelRepository().submodelInterface(submodel)
+                                        .submodelElement(IdShortPath.builder().idShort(entity.getIdShort()).idShort(expected.getIdShort()).build()),
+                                StatusCode.SUCCESS_NO_CONTENT)));
+        Entity after = HttpHelper.getWithSingleResult(httpClient, apiPaths.submodelRepository().submodelInterface(submodel).submodelElement(entity.getIdShort()),
+                Entity.class);
+        Assert.assertFalse(after.getStatements().contains(expected));
+    }
+
+
+    @Test
+    public void testSubmodelInterfaceDeleteSubmodelElementInsideAnnotatedRelElem()
+            throws IOException, DeserializationException, InterruptedException, URISyntaxException, SerializationException, MessageBusException, NoSuchAlgorithmException,
+            KeyManagementException {
+        Submodel submodel = environment.getSubmodels().get(2);
+        AnnotatedRelationshipElement relElement = (AnnotatedRelationshipElement) submodel.getSubmodelElements().get(1);
+        DataElement expected = relElement.getAnnotations().get(0);
+        AnnotatedRelationshipElement before = HttpHelper.getWithSingleResult(httpClient,
+                apiPaths.submodelRepository().submodelInterface(submodel).submodelElement(relElement.getIdShort()),
+                AnnotatedRelationshipElement.class);
+        Assert.assertTrue(before.getAnnotations().contains(expected));
+
+        assertEvent(
+                messageBus,
+                ElementDeleteEventMessage.class,
+                expected,
+                LambdaExceptionHelper.wrap(
+                        x -> assertExecute(
+                                HttpMethod.DELETE,
+                                apiPaths.submodelRepository().submodelInterface(submodel)
+                                        .submodelElement(IdShortPath.builder().idShort(relElement.getIdShort()).idShort(expected.getIdShort()).build()),
+                                StatusCode.SUCCESS_NO_CONTENT)));
+        AnnotatedRelationshipElement after = HttpHelper.getWithSingleResult(httpClient,
+                apiPaths.submodelRepository().submodelInterface(submodel).submodelElement(relElement.getIdShort()),
+                AnnotatedRelationshipElement.class);
+        Assert.assertFalse(after.getAnnotations().contains(expected));
     }
 
 

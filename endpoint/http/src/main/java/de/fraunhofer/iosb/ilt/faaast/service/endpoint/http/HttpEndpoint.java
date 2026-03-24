@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import org.eclipse.digitaltwin.aas4j.v3.model.SecurityTypeEnum;
 import org.eclipse.digitaltwin.aas4j.v3.model.impl.DefaultEndpoint;
@@ -65,7 +66,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of HTTP endpoint. Accepts http request and maps them to Request objects passes them to the service and
- * expects a response object which is streamed as json response to the http client
+ * expects a response object which is streamed as json
+ * response to the http client
  */
 public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
 
@@ -95,8 +97,8 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
      *
      * @return the API version prefix
      */
-    protected static String getVersionPrefix() {
-        return String.format("/api/%s", API_VERSION);
+    protected String getPathPrefix() {
+        return config.getPathPrefix();
     }
 
 
@@ -117,7 +119,11 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
         RequestHandlerServlet handler = new RequestHandlerServlet(this, config, serviceContext);
         context.addServlet(handler, "/*");
 
-        if (Objects.nonNull(config.getJwkProvider())) {
+        if (Objects.nonNull(config.getTokenExchange())) {
+            context.addFilter(new JwtValidationFilter(config.getTokenExchange(), true),
+                    "*", EnumSet.allOf(DispatcherType.class));
+        }
+        else if (Objects.nonNull(config.getJwkProvider())) {
             URL jwkProviderUrl;
             try {
                 jwkProviderUrl = new URL(config.getJwkProvider());
@@ -126,10 +132,10 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
                 throw new EndpointException("Could not parse JWK provider URL", malformedJwkProviderUrl);
             }
             JwkProvider jwkProvider = new UrlJwkProvider(jwkProviderUrl);
-
             context.addFilter(new JwtValidationFilter(jwkProvider),
                     "*", EnumSet.allOf(DispatcherType.class));
         }
+
         server.setErrorHandler(new HttpErrorHandler(config));
         try {
             server.start();
@@ -195,7 +201,7 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
         SslContextFactory.Server sslContextFactory = new SslContextFactory.Server();
         if (Objects.isNull(config.getCertificate())
                 || Objects.isNull(config.getCertificate().getKeyStorePath())
-                || config.getCertificate().getKeyStorePath().equals("")) {
+                || config.getCertificate().getKeyStorePath().isEmpty()) {
             LOGGER.info("Generating self-signed certificate for HTTPS (reason: no certificate provided)");
             sslContextFactory.setKeyStore(generateSelfSignedCertificate());
         }
@@ -248,12 +254,12 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
         if (config.getProfiles().stream()
                 .flatMap(x -> x.getInterfaces().stream())
                 .anyMatch(x -> Objects.equals(x, Interface.AAS_REPOSITORY))) {
-            result.add(endpointFor(Interface.AAS_REPOSITORY, "/shells", EncodingHelper.base64UrlEncode(aasId)));
+            result.add(endpointFor(Interface.AAS_REPOSITORY, "shells", aasId));
         }
         if (config.getProfiles().stream()
                 .flatMap(x -> x.getInterfaces().stream())
                 .anyMatch(x -> Objects.equals(x, Interface.AAS))) {
-            result.add(endpointFor(Interface.AAS, "/shells/", EncodingHelper.base64UrlEncode(aasId)));
+            result.add(endpointFor(Interface.AAS, "shells", aasId));
         }
         return result;
     }
@@ -268,12 +274,12 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
         if (config.getProfiles().stream()
                 .flatMap(x -> x.getInterfaces().stream())
                 .anyMatch(x -> Objects.equals(x, Interface.SUBMODEL_REPOSITORY))) {
-            result.add(endpointFor(Interface.SUBMODEL_REPOSITORY, "/submodels", EncodingHelper.base64UrlEncode(submodelId)));
+            result.add(endpointFor(Interface.SUBMODEL_REPOSITORY, "submodels", submodelId));
         }
         if (config.getProfiles().stream()
                 .flatMap(x -> x.getInterfaces().stream())
                 .anyMatch(x -> Objects.equals(x, Interface.SUBMODEL))) {
-            result.add(endpointFor(Interface.SUBMODEL, "/submodels/", EncodingHelper.base64UrlEncode(submodelId)));
+            result.add(endpointFor(Interface.SUBMODEL, "submodels", submodelId));
         }
 
         return result;
@@ -281,20 +287,10 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
 
 
     private org.eclipse.digitaltwin.aas4j.v3.model.Endpoint endpointFor(Interface iface, String path, String identifiableId) {
-        // Use shell/submodel callback addresses if defined
-        URI endpointUri;
-        if (iface.getName().startsWith(Interface.AAS.getName()) && Objects.nonNull(config.getShellCallbackAddress())) {
-            endpointUri = buildUri(config.getShellCallbackAddress());
-        }
-        else if (iface.getName().startsWith(Interface.SUBMODEL.getName()) && Objects.nonNull(config.getSubmodelCallbackAddress())) {
-            endpointUri = buildUri(config.getSubmodelCallbackAddress());
-        }
-        else {
-            endpointUri = buildUri(getEndpointUri().toString(), getVersionPrefix(), path);
-        }
+        URI endpointUri = buildUri(getEndpointUri().toString(), path);
 
         if (iface == Interface.SUBMODEL || iface == Interface.AAS) {
-            endpointUri = buildUri(endpointUri.toString(), identifiableId);
+            endpointUri = buildUri(endpointUri.toString(), EncodingHelper.base64UrlEncode(identifiableId));
         }
 
         return new DefaultEndpoint.Builder()
@@ -320,29 +316,35 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
         if (subprotocolBodyTemplate == null) {
             return null;
         }
-        return subprotocolBodyTemplate.replace("{}", identifiableId == null ? "" : identifiableId);
+        return subprotocolBodyTemplate.replace("${id}", Optional.ofNullable(identifiableId).orElse(""));
     }
 
 
     private URI getEndpointUri() {
         URI result = server.getURI();
-
-        if (Objects.nonNull(config.getHostname())) {
-            try {
+        try {
+            if (Objects.nonNull(config.getCallbackAddress())) {
+                result = buildUri(
+                        config.getCallbackAddress(),
+                        // server URI path comes before configured prefix
+                        result.getPath(),
+                        config.getPathPrefix());
+            }
+            else if (Objects.nonNull(config.getHostname())) {
                 result = new URI(
                         result.getScheme(),
                         result.getUserInfo(),
                         config.getHostname(),
                         result.getPort(),
-                        result.getPath(),
+                        // server URI path comes before configured prefix
+                        result.getPath().concat(config.getPathPrefix()),
                         result.getQuery(),
                         result.getFragment());
             }
-            catch (URISyntaxException e) {
-                LOGGER.warn("error creating endpoint URI for HTTP endpoint based on hostname from configuration (hostname: {})",
-                        config.getHostname(),
-                        e);
-            }
+        }
+        catch (URISyntaxException e) {
+            LOGGER.error("error creating endpoint URI for HTTP endpoint based on hostname from configuration (callbackAddress: {}, hostname: {}): {}",
+                    config.getCallbackAddress(), config.getHostname(), e.getMessage());
         }
         return result;
     }
@@ -350,20 +352,29 @@ public class HttpEndpoint extends AbstractEndpoint<HttpEndpointConfig> {
 
     private URI buildUri(String base, String... paths) {
         String safeBase = base.endsWith("/") ? base : base.concat("/");
+
+        String safePath = getSafePath(paths);
+
+        return URI.create(safeBase).resolve(safePath);
+    }
+
+
+    private String getSafePath(String[] paths) {
         StringBuilder safePathBuilder = new StringBuilder();
+
+        // Each path in paths should not start with / but end with /.
         for (String path: paths) {
-            if (path == null || path.isBlank()) {
+            if (path == null || path.isEmpty() || path.equals("/")) {
+                // Do not consider empty path segments
                 continue;
             }
-            safePathBuilder.append(path.startsWith("/") ? path : path.concat("/"));
-        }
-        String safePath = safePathBuilder.toString();
-        if (safePath.startsWith("/")) {
-            safePath = safePath.substring(1);
+            // Double-slashes within path segments are valid and sometimes even meaningful,
+            // so we only care about the bits connecting the path segments (prefix/suffix).
+            String safePath = path.startsWith("/") ? path.substring(1) : path;
+            safePathBuilder.append(safePath.endsWith("/") ? safePath : safePath.concat("/"));
         }
 
-        // Remove leading slash again
-        return URI.create(safeBase).resolve(safePath);
+        return safePathBuilder.toString().endsWith("/") ? safePathBuilder.substring(0, safePathBuilder.length() - 1) : safePathBuilder.toString();
     }
 
 

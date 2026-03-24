@@ -11,7 +11,7 @@ RUN groupadd --system --gid 1001 faaast \
     # Create directories to which FA³ST needs permissions
     && mkdir /app/resources /app/logs /app/PKI /app/USERS_PKI \
     # Grant read and write permissions on created directories
-    && chmod -R ugo+rw /app/resources /app/PKI /app/USERS_PKI /app/logs
+    && chown -R faaast:faaast /app
 
 USER faaast
 WORKDIR /app

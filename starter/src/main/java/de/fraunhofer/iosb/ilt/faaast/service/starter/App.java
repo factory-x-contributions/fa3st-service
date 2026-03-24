@@ -65,6 +65,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.poi.openxml4j.util.ZipSecureFile;
 import org.eclipse.digitaltwin.aas4j.v3.model.Environment;
 import org.eclipse.digitaltwin.aas4j.v3.model.impl.DefaultEnvironment;
 import org.slf4j.Logger;
@@ -157,9 +158,9 @@ public class App implements Runnable {
 
     @Option(names = {
             "-q",
-            "--quite"
+            "--quiet"
     }, description = "Reduces log output (ERROR for FA³ST packages, ERROR for all other packages). Default information about the starting process will still be printed.")
-    public boolean quite = false;
+    public boolean quiet = false;
 
     @Option(names = {
             "-v",
@@ -309,18 +310,18 @@ public class App implements Runnable {
     private void configureLogging() {
         if (veryVeryVerbose) {
             FaaastFilter.setLevelFaaast(Level.TRACE);
-            FaaastFilter.setLevelExternal(Level.DEBUG);
+            FaaastFilter.setLevelExternal(Level.TRACE);
         }
         else if (veryVerbose) {
+            FaaastFilter.setLevelFaaast(Level.TRACE);
+            FaaastFilter.setLevelExternal(Level.DEBUG);
+        }
+        else if (verbose) {
             FaaastFilter.setLevelFaaast(Level.DEBUG);
             FaaastFilter.setLevelExternal(Level.INFO);
         }
-        else if (verbose) {
-            FaaastFilter.setLevelFaaast(Level.INFO);
-            FaaastFilter.setLevelExternal(Level.WARN);
-        }
-        else if (quite) {
-            FaaastFilter.setLevelFaaast(Level.ERROR);
+        else if (quiet) {
+            FaaastFilter.setLevelFaaast(Level.WARN);
             FaaastFilter.setLevelExternal(Level.ERROR);
         }
         if (logLevelFaaast != null) {
@@ -356,6 +357,9 @@ public class App implements Runnable {
         config = withModel(config);
         config = withEndpoints(config);
         config = withOverrides(config);
+
+        ZipSecureFile.setMinInflateRatio(config.getCore().getMinInflateRatio());
+
         validate(config);
         if (!dryRun) {
             runService(config);

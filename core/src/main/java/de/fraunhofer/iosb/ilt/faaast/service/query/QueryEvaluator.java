@@ -691,11 +691,7 @@ public class QueryEvaluator {
 
             List<Object> values = new ArrayList<>();
             if (!pathPart.isEmpty()) {
-                // Pfad-basierter Zugriff (bleibt gleich)
-                SubmodelElement sme = getSubmodelElementByPath(sm, pathPart);
-                if (sme != null) {
-                    values.addAll(getSubmodelElementAttributeValues(sme, attr));
-                }
+                values.addAll(getSubmodelElementValuesByPath(sm, pathPart, attr));
             }
             else {
                 collectValuesRecursively(sm.getSubmodelElements(), attr, values);
@@ -871,6 +867,18 @@ public class QueryEvaluator {
                 if (sme instanceof Property) {
                     return Collections.singletonList(((Property) sme).getValue());
                 }
+                if (sme instanceof MultiLanguageProperty) {
+                    List<LangStringTextType> values = ((MultiLanguageProperty) sme).getValue();
+                    if (values == null)
+                        return Collections.emptyList();
+                    List<String> result = new ArrayList<>();
+                    for (LangStringTextType lst: values) {
+                        if (lst != null && lst.getText() != null) {
+                            result.add(lst.getText());
+                        }
+                    }
+                    return result;
+                }
                 return Collections.emptyList();
             case "valueType":
                 if (sme instanceof Property && ((Property) sme).getValueType() != null) {
@@ -947,7 +955,7 @@ public class QueryEvaluator {
 
 
     /**
-     * Resolve a submodel element by dot-separated path.
+     * Resolve a submodel element by dot-separated path with support for [] array notation.
      */
     private SubmodelElement getSubmodelElementByPath(Submodel sm, String path) {
         if (sm == null || path == null || path.isEmpty())
@@ -976,6 +984,80 @@ public class QueryEvaluator {
                 return null;
         }
         return current;
+    }
+
+
+    /**
+     * Get values from submodel elements using a path with [] array notation support.
+     * Handles paths like "capabilities[].values[]#value"
+     */
+    private List<Object> getSubmodelElementValuesByPath(Submodel sm, String path, String attr) {
+        if (path == null || path.isEmpty())
+            return Collections.emptyList();
+
+        List<Object> result = new ArrayList<>();
+        String[] segments = path.split("\\.");
+
+        processPathSegments(sm.getSubmodelElements(), segments, 0, attr, result);
+        return result;
+    }
+
+
+    private void processPathSegments(List<SubmodelElement> elements, String[] segments, int segmentIndex, String attr, List<Object> result) {
+        if (segmentIndex >= segments.length || elements == null || elements.isEmpty())
+            return;
+
+        String segment = segments[segmentIndex];
+        boolean isLastSegment = segmentIndex == segments.length - 1;
+
+        if (segment.endsWith("[]")) {
+            String listName = segment.substring(0, segment.length() - 2);
+            for (SubmodelElement elem: elements) {
+                if (listName.equals(elem.getIdShort()) && elem instanceof SubmodelElementList) {
+                    List<SubmodelElement> listItems = ((SubmodelElementList) elem).getValue();
+                    if (isLastSegment) {
+                        for (SubmodelElement item: listItems) {
+                            result.addAll(getSubmodelElementAttributeValues(item, attr));
+                        }
+                    }
+                    else {
+                        processPathSegments(listItems, segments, segmentIndex + 1, attr, result);
+                    }
+                }
+                // If no idShort match, search inside collections for the next segment
+                if (elem instanceof SubmodelElementCollection) {
+                    processPathSegments(((SubmodelElementCollection) elem).getValue(), segments, segmentIndex, attr, result);
+                }
+                else if (elem instanceof SubmodelElementList) {
+                    processPathSegments(((SubmodelElementList) elem).getValue(), segments, segmentIndex, attr, result);
+                }
+            }
+        }
+        else {
+            for (SubmodelElement elem: elements) {
+                boolean matched = segment.equals(elem.getIdShort());
+                if (matched) {
+                    if (isLastSegment) {
+                        result.addAll(getSubmodelElementAttributeValues(elem, attr));
+                    }
+                    else if (elem instanceof SubmodelElementCollection) {
+                        processPathSegments(((SubmodelElementCollection) elem).getValue(), segments, segmentIndex + 1, attr, result);
+                    }
+                    else if (elem instanceof SubmodelElementList) {
+                        processPathSegments(((SubmodelElementList) elem).getValue(), segments, segmentIndex + 1, attr, result);
+                    }
+                }
+                // If no idShort match and element is a collection/list, search inside it for the next segment
+                if (!matched) {
+                    if (elem instanceof SubmodelElementCollection) {
+                        processPathSegments(((SubmodelElementCollection) elem).getValue(), segments, segmentIndex, attr, result);
+                    }
+                    else if (elem instanceof SubmodelElementList) {
+                        processPathSegments(((SubmodelElementList) elem).getValue(), segments, segmentIndex, attr, result);
+                    }
+                }
+            }
+        }
     }
 
 

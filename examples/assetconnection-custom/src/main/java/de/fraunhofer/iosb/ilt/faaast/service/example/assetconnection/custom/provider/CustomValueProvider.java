@@ -16,6 +16,7 @@ package de.fraunhofer.iosb.ilt.faaast.service.example.assetconnection.custom.pro
 
 import de.fraunhofer.iosb.ilt.faaast.service.ServiceContext;
 import de.fraunhofer.iosb.ilt.faaast.service.assetconnection.AssetConnectionException;
+import de.fraunhofer.iosb.ilt.faaast.service.assetconnection.AssetProviderConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.assetconnection.AssetValueProvider;
 import de.fraunhofer.iosb.ilt.faaast.service.example.assetconnection.custom.provider.config.CustomValueProviderConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.example.assetconnection.custom.util.AasHelper;
@@ -66,6 +67,12 @@ public class CustomValueProvider implements AssetValueProvider {
     @Override
     public void setValue(DataElementValue value) throws AssetConnectionException {
         throw new UnsupportedOperationException(String.format("%s does not support writing", getClass().getName()));
+    }
+
+
+    @Override
+    public AssetProviderConfig asConfig() {
+        return null;
     }
 
 }

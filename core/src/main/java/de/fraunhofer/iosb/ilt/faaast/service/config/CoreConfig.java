@@ -15,6 +15,7 @@
 package de.fraunhofer.iosb.ilt.faaast.service.config;
 
 import de.fraunhofer.iosb.ilt.faaast.service.model.validation.ModelValidatorConfig;
+import de.fraunhofer.iosb.ilt.faaast.service.util.Ensure;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -31,6 +32,8 @@ public class CoreConfig {
 
     private static final long DEFAULT_ASSET_CONNECTION_RETRY_INTERVAL = 1000;
     private static final int DEFAULT_REQUEST_HANDLER_THREADPOOL_SIZE = 1;
+    private static final double DEFAULT_MIN_INFLATE_RATIO = 0.001;
+    private static final String ALLOWED_URL_PREFIX_REGEX = "https?://.*";
 
     private long assetConnectionRetryInterval;
     private int requestHandlerThreadPoolSize;
@@ -39,6 +42,8 @@ public class CoreConfig {
     private ModelValidatorConfig validationOnUpdate;
     private List<String> aasRegistries;
     private List<String> submodelRegistries;
+    private RegistrySynchronizationConfig registrySynchronization;
+    private double minInflateRatio;
 
     public CoreConfig() {
         this.assetConnectionRetryInterval = DEFAULT_ASSET_CONNECTION_RETRY_INTERVAL;
@@ -60,6 +65,7 @@ public class CoreConfig {
                 .build();
         this.aasRegistries = new ArrayList<>();
         this.submodelRegistries = new ArrayList<>();
+        this.minInflateRatio = DEFAULT_MIN_INFLATE_RATIO;
     }
 
 
@@ -123,7 +129,13 @@ public class CoreConfig {
     }
 
 
+    /**
+     * Sets the AAS registries. Each URL must start with either http:// or https://.
+     *
+     * @param aasRegistries The aasRegistries URL list as a list of strings.
+     */
     public void setAasRegistries(List<String> aasRegistries) {
+        validateRegistryUrl(aasRegistries);
         this.aasRegistries = aasRegistries;
     }
 
@@ -133,8 +145,52 @@ public class CoreConfig {
     }
 
 
+    /**
+     * Sets the submodel registries. Each URL must start with either http:// or https://.
+     *
+     * @param submodelRegistries The submodelRegistries URL list as a list of strings.
+     */
     public void setSubmodelRegistries(List<String> submodelRegistries) {
+        validateRegistryUrl(submodelRegistries);
         this.submodelRegistries = submodelRegistries;
+    }
+
+
+    private void validateRegistryUrl(List<String> registryUrls) {
+        for (String url: registryUrls) {
+            Ensure.require(url.matches(ALLOWED_URL_PREFIX_REGEX), String.format("URLs in %s.%s must start with https:// or http://, but one of them is: %s",
+                    this.getClass().getSimpleName(), "(aas|submodel)Registries", url));
+        }
+    }
+
+
+    /**
+     * Gets configuration for registry synchronization.
+     *
+     * @return registry synchronization configuration or {@code null} if not configured
+     */
+    public RegistrySynchronizationConfig getRegistrySynchronization() {
+        return registrySynchronization;
+    }
+
+
+    /**
+     * Sets configuration for registry synchronization.
+     *
+     * @param registrySynchronization registry synchronization configuration or {@code null} to disable
+     */
+    public void setRegistrySynchronization(RegistrySynchronizationConfig registrySynchronization) {
+        this.registrySynchronization = registrySynchronization;
+    }
+
+
+    public double getMinInflateRatio() {
+        return minInflateRatio;
+    }
+
+
+    public void setMinInflateRatio(double minInflateRatio) {
+        this.minInflateRatio = minInflateRatio;
     }
 
 
@@ -146,7 +202,9 @@ public class CoreConfig {
                 validationOnCreate,
                 validationOnUpdate,
                 aasRegistries,
-                submodelRegistries);
+                submodelRegistries,
+                registrySynchronization,
+                minInflateRatio);
     }
 
 
@@ -168,7 +226,9 @@ public class CoreConfig {
                 && Objects.equals(this.validationOnCreate, other.validationOnCreate)
                 && Objects.equals(this.validationOnUpdate, other.validationOnUpdate)
                 && Objects.equals(this.aasRegistries, other.aasRegistries)
-                && Objects.equals(this.submodelRegistries, other.submodelRegistries);
+                && Objects.equals(this.submodelRegistries, other.submodelRegistries)
+                && Objects.equals(this.registrySynchronization, other.registrySynchronization)
+                && Objects.equals(this.minInflateRatio, other.minInflateRatio);
     }
 
     public static class Builder extends ExtendableBuilder<CoreConfig, Builder> {
@@ -247,6 +307,18 @@ public class CoreConfig {
             getBuildingInstance().getValidationOnLoad().setValidateIdentifierUniqueness(value);
             getBuildingInstance().getValidationOnCreate().setValidateIdentifierUniqueness(value);
             getBuildingInstance().getValidationOnUpdate().setValidateIdentifierUniqueness(value);
+            return getSelf();
+        }
+
+
+        public Builder minInflateRatio(double value) {
+            getBuildingInstance().setMinInflateRatio(value);
+            return getSelf();
+        }
+
+
+        public Builder registrySynchronization(RegistrySynchronizationConfig value) {
+            getBuildingInstance().setRegistrySynchronization(value);
             return getSelf();
         }
 

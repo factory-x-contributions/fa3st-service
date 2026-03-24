@@ -15,13 +15,13 @@
 package de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.request.mapper.submodelrepository;
 
 import de.fraunhofer.iosb.ilt.faaast.service.ServiceContext;
-import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.model.HttpMethod;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.model.HttpRequest;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.request.mapper.AbstractRequestMapper;
 import de.fraunhofer.iosb.ilt.faaast.service.model.api.Request;
 import de.fraunhofer.iosb.ilt.faaast.service.model.api.request.submodelrepository.QuerySubmodelsRequest;
 import de.fraunhofer.iosb.ilt.faaast.service.model.exception.InvalidRequestException;
-import de.fraunhofer.iosb.ilt.faaast.service.model.query.json.Query;
+import de.fraunhofer.iosb.ilt.faaast.service.model.http.HttpMethod;
+import de.fraunhofer.iosb.ilt.faaast.service.model.query.json.Schema;
 import java.util.Map;
 
 
@@ -40,7 +40,7 @@ public class QuerySubmodelsRequestMapper extends AbstractRequestMapper {
     @Override
     public Request doParse(HttpRequest httpRequest, Map<String, String> urlParameters) throws InvalidRequestException {
         return QuerySubmodelsRequest.builder()
-                .query(parseBody(httpRequest, Query.class))
+                .query(parseBody(httpRequest, Schema.class).getQuery())
                 .build();
     }
 }
