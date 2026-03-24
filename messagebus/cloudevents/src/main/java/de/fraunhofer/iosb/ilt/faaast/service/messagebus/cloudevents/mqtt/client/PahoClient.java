@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.util.Objects;
+import java.util.UUID;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
@@ -30,6 +31,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
+import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -46,7 +48,7 @@ public abstract class PahoClient {
     private static final Logger logger = LoggerFactory.getLogger(PahoClient.class);
 
     private final MqttClientConfig config;
-    private org.eclipse.paho.client.mqttv3.MqttClient pahoClient;
+    private MqttClient mqttClient;
     private MqttConnectOptions connectOptions;
 
     public PahoClient(MqttClientConfig config) {
@@ -55,19 +57,31 @@ public abstract class PahoClient {
 
 
     /**
+     * Like the MessageBus.init() function, the connection of this paho client is prepared.
+     * 
+     * @throws MessageBusException Building the MQTT connect options failed
+     */
+    public void prepareConnect() throws MessageBusException {
+        connectOptions = buildConnectOptions();
+    }
+
+
+    /**
      * Starts the client connection.
      *
      * @throws MessageBusException if the client fails to connect to the broker
      */
-    public void start() throws MessageBusException {
-        connectOptions = buildConnectOptions();
+    public void connect() throws MessageBusException {
+        if (connectOptions == null) {
+            throw new MessageBusException("Call prepareConnect prior to connect");
+        }
 
         try {
-            pahoClient = new org.eclipse.paho.client.mqttv3.MqttClient(
+            mqttClient = new MqttClient(
                     config.host(),
-                    config.clientId(),
+                    UUID.randomUUID().toString(),
                     new MemoryPersistence());
-            pahoClient.setCallback(new MqttCallbackExtended() {
+            mqttClient.setCallback(new MqttCallbackExtended() {
                 @Override
                 public void connectionLost(Throwable throwable) {
                     logger.warn("Connection to MQTT broker {} lost", config.host(), throwable);
@@ -94,10 +108,55 @@ public abstract class PahoClient {
 
             logger.trace("Connecting to MQTT broker: {}", config.host());
 
-            pahoClient.connect(connectOptions);
+            mqttClient.connect(connectOptions);
         }
         catch (MqttException e) {
-            throw new MessageBusException("Failed to connect to Cloudevents MQTT server", e);
+            throw new MessageBusException("Failed to connect to MQTT broker", e);
+        }
+    }
+
+
+    /**
+     * Disconnects the client.
+     */
+    public void disconnect() {
+        if (mqttClient == null) {
+            return;
+        }
+        try {
+            if (mqttClient.isConnected()) {
+                logger.trace("Disconnecting from MQTT broker...");
+                mqttClient.disconnect();
+                logger.info("Disconnected from MQTT broker");
+            }
+            logger.trace("Closing paho-client");
+            mqttClient.close(true);
+            mqttClient = null;
+        }
+        catch (MqttException e) {
+            logger.warn("MQTT client did not stop gracefully", e);
+        }
+    }
+
+
+    /**
+     * Publishes the message.
+     *
+     * @param topic the topic to publish on
+     * @param content the message to publish
+     * @throws MessageBusException if publishing the message fails
+     */
+    public void publish(String topic, String content) throws MessageBusException {
+        if (mqttClient == null || !mqttClient.isConnected()) {
+            logger.warn("Publishing not possible, MQTT connection is closed. Trying to connect...");
+            connect();
+        }
+        try {
+            mqttClient.publish(topic, new MqttMessage(content.getBytes()));
+            logger.debug("Message published - broker: {} topic: {}, data: {}", config.host(), topic, content);
+        }
+        catch (MqttException e) {
+            throw new MessageBusException(String.format("Publishing message on MQTT broker %s failed", config.host()), e);
         }
     }
 
@@ -114,7 +173,7 @@ public abstract class PahoClient {
 
     /**
      * Build the connect options object necessary for the paho client.
-     * 
+     *
      * @return connect options containing information about MQTT connection.
      * @throws MessageBusException Setting SSL socket factory failed for client certificate.
      */
@@ -128,7 +187,7 @@ public abstract class PahoClient {
             }
         }
         catch (GeneralSecurityException | IOException e) {
-            throw new MessageBusException("error setting up SSL for Cloudevents MQTT message bus", e);
+            throw new MessageBusException("Error setting up SSL for CloudEvents MQTT message bus", e);
         }
 
         connectOptions.setAutomaticReconnect(true);
@@ -137,29 +196,6 @@ public abstract class PahoClient {
         connectOptions.setUserName(config.user());
 
         return connectOptions;
-    }
-
-
-    /**
-     * Stops the client connection.
-     */
-    public void stop() {
-        if (pahoClient == null) {
-            return;
-        }
-        try {
-            if (pahoClient.isConnected()) {
-                logger.trace("Disconnecting from MQTT broker...");
-                pahoClient.disconnect();
-                logger.info("Disconnected from MQTT broker");
-            }
-            logger.trace("Closing paho-client");
-            pahoClient.close(true);
-            pahoClient = null;
-        }
-        catch (MqttException e) {
-            logger.warn("Cloudevents message bus did not stop gracefully", e);
-        }
     }
 
 
@@ -182,25 +218,4 @@ public abstract class PahoClient {
         }
     }
 
-
-    /**
-     * Publishes the message.
-     *
-     * @param topic the topic to publish on
-     * @param content the message to publish
-     * @throws MessageBusException if publishing the message fails
-     */
-    public void publish(String topic, String content) throws MessageBusException {
-        if (pahoClient == null || !pahoClient.isConnected()) {
-            logger.debug("received data but Cloudevents MQTT connection is closed, trying to connect...");
-            start();
-        }
-        try {
-            pahoClient.publish(topic, new MqttMessage(content.getBytes()));
-            logger.debug("message published - broker: {} topic: {}, data: {}", config.host(), topic, content);
-        }
-        catch (MqttException e) {
-            throw new MessageBusException(String.format("publishing message on MQTT broker %s failed", config.host()), e);
-        }
-    }
 }

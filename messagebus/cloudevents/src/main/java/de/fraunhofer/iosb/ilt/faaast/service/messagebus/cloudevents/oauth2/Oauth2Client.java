@@ -58,12 +58,12 @@ public class Oauth2Client {
      */
     public Oauth2CredentialsResponse requestToken(Oauth2CredentialsRequest request) throws MessageBusException, JsonProcessingException {
 
-        HttpResponse<String> response = null;
+        HttpResponse<String> response;
         try {
             response = httpClient.send(toHttpRequest(request), HttpResponse.BodyHandlers.ofString());
         }
         catch (IOException | InterruptedException e) {
-            throw new RuntimeException(e);
+            throw new MessageBusException("Oauth2 token request failed", e);
         }
 
         if (response.statusCode() < 200 || response.statusCode() > 299) {

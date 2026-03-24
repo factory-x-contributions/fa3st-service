@@ -34,13 +34,10 @@ import de.fraunhofer.iosb.ilt.faaast.service.model.exception.ResourceNotFoundExc
 import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.EventMessage;
 import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.SubscriptionId;
 import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.SubscriptionInfo;
-import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.event.access.AccessEventMessage;
-import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.event.error.ErrorEventMessage;
 import de.fraunhofer.iosb.ilt.faaast.service.util.Ensure;
 import de.fraunhofer.iosb.ilt.faaast.service.util.EnvironmentHelper;
 import io.cloudevents.CloudEvent;
 import io.cloudevents.jackson.JsonFormat;
-import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -62,11 +59,11 @@ import org.slf4j.LoggerFactory;
  * <p>
  * Also implements the internal messagebus functionality to support internal components relying on Events.
  */
-public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsConfig> {
+public class MessageBusCloudEvents implements MessageBus<MessageBusCloudEventsConfig> {
 
-    private static final String PUBLISH_ERROR_MSG = "%s publishing event via Cloudevents MQTT message bus for message type %s";
+    private static final String PUBLISH_ERROR_MSG = "%s publishing event via CloudEvents MQTT message bus for message type %s";
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(MessageBusCloudevents.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MessageBusCloudEvents.class);
 
     private final BlockingQueue<EventMessage> messageQueue;
     private final AtomicBoolean running;
@@ -74,7 +71,7 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
     private final Map<SubscriptionId, SubscriptionInfo> subscriptions;
 
     private Function<Reference, Referable> referableSupplier;
-    private MessageBusCloudeventsConfig config;
+    private MessageBusCloudEventsConfig config;
     private PahoClient client;
     private ObjectMapper objectMapper;
 
@@ -83,7 +80,7 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
     /**
      * Class constructor.
      */
-    public MessageBusCloudevents() {
+    public MessageBusCloudEvents() {
         running = new AtomicBoolean(false);
         messageQueue = new LinkedBlockingDeque<>();
 
@@ -94,7 +91,8 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
 
     @Override
     public void start() throws MessageBusException {
-        client.start();
+        client.prepareConnect();
+        client.connect();
 
         executor.submit(this::run);
     }
@@ -102,7 +100,7 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
 
     @Override
     public void stop() {
-        client.stop();
+        client.disconnect();
 
         running.set(false);
         executor.shutdown();
@@ -119,7 +117,7 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
 
     @Override
     public SubscriptionId subscribe(SubscriptionInfo subscriptionInfo) {
-        // Internal subscriptions only. Subscribing to cloudevents is handled by MQTT broker
+        // Internal subscriptions only. Subscribing to CloudEvents is handled by MQTT broker
         Ensure.requireNonNull(subscriptionInfo, "subscriptionInfo must be non-null");
         SubscriptionId subscriptionId = new SubscriptionId();
         subscriptions.put(subscriptionId, subscriptionInfo);
@@ -129,19 +127,19 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
 
     @Override
     public void unsubscribe(SubscriptionId id) {
-        // Internal subscriptions only. Subscribing to cloudevents is handled by MQTT broker
+        // Internal subscriptions only. Subscribing to CloudEvents is handled by MQTT broker
         subscriptions.remove(id);
     }
 
 
     @Override
-    public MessageBusCloudeventsConfig asConfig() {
+    public MessageBusCloudEventsConfig asConfig() {
         return config;
     }
 
 
     @Override
-    public void init(CoreConfig coreConfig, MessageBusCloudeventsConfig config, ServiceContext serviceContext) {
+    public void init(CoreConfig coreConfig, MessageBusCloudEventsConfig config, ServiceContext serviceContext) {
         this.config = config;
         if (config.getIdentityProviderUrl() != null) {
             client = new TokenBasedPahoClient(MqttClientConfig.from(config));
@@ -182,27 +180,22 @@ public class MessageBusCloudevents implements MessageBus<MessageBusCloudeventsCo
             throw new MessageBusException("Adding message to internal queue failed", e);
         }
 
-        distributeCloudevent(message);
+        distributeCloudEvent(message);
     }
 
 
-    private void distributeCloudevent(EventMessage message) throws MessageBusException {
+    private void distributeCloudEvent(EventMessage message) throws MessageBusException {
         try {
-            if (isCloudeventMessage(message)) {
+            if (eventMapper.canHandle(message)) {
                 LOGGER.debug("Publishing {} to {}", message.getClass().getSimpleName(), config.getHost());
-                CloudEvent cloudEvent = eventMapper.createCloudevent(message);
+                CloudEvent cloudEvent = eventMapper.createCloudEvent(message);
                 client.publish(config.getTopicPrefix(), objectMapper.writeValueAsString(cloudEvent));
             }
         }
-        catch (JsonProcessingException | URISyntaxException publishException) {
+        catch (JsonProcessingException publishException) {
             throw new MessageBusException(String.format(PUBLISH_ERROR_MSG, publishException.getClass().getSimpleName(), message.getClass()),
                     publishException);
         }
-    }
-
-
-    private boolean isCloudeventMessage(EventMessage m) {
-        return !(m instanceof ErrorEventMessage) && !(m instanceof AccessEventMessage);
     }
 
 

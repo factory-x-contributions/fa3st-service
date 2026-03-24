@@ -15,12 +15,12 @@
 package de.fraunhofer.iosb.ilt.faaast.service.messagebus.cloudevents.mqtt.client.config;
 
 import de.fraunhofer.iosb.ilt.faaast.service.config.CertificateConfig;
-import de.fraunhofer.iosb.ilt.faaast.service.messagebus.cloudevents.MessageBusCloudeventsConfig;
+import de.fraunhofer.iosb.ilt.faaast.service.messagebus.cloudevents.MessageBusCloudEventsConfig;
 import java.util.Objects;
 
 
 /**
- * Configuration for MQTT clients used in the context of the Cloudevents message bus.
+ * Configuration for MQTT clients used in the context of the CloudEvents message bus.
  * 
  * @param clientCertificate MQTT client certificate
  * @param host MQTT broker URL
@@ -48,19 +48,19 @@ public record MqttClientConfig(
 
 
     /**
-     * Create a MqttClientConfig from a MessageBusCloudeventsConfig which is provided by users.
+     * Create a MqttClientConfig from a MessageBusCloudEventsConfig which is provided by users.
      *
-     * @param cloudeventsConfig The cloudevents config
+     * @param cloudEventsConfig The cloudEvents config
      * @return MqttClientConfig instance
      */
-    public static MqttClientConfig from(MessageBusCloudeventsConfig cloudeventsConfig) {
+    public static MqttClientConfig from(MessageBusCloudEventsConfig cloudEventsConfig) {
         return new MqttClientConfig(
-                cloudeventsConfig.getClientCertificate(),
-                cloudeventsConfig.getHost(),
-                cloudeventsConfig.getUser(),
-                cloudeventsConfig.getPassword(),
-                cloudeventsConfig.getClientId(),
-                cloudeventsConfig.getClientSecret(),
-                cloudeventsConfig.getIdentityProviderUrl());
+                cloudEventsConfig.getClientCertificate(),
+                cloudEventsConfig.getHost(),
+                cloudEventsConfig.getUser(),
+                cloudEventsConfig.getPassword(),
+                cloudEventsConfig.getClientId(),
+                cloudEventsConfig.getClientSecret(),
+                cloudEventsConfig.getIdentityProviderUrl());
     }
 }

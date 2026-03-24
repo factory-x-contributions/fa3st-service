@@ -32,7 +32,6 @@ import de.fraunhofer.iosb.ilt.faaast.service.util.ReferenceHelper;
 import io.cloudevents.CloudEvent;
 import io.cloudevents.core.builder.CloudEventBuilder;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.Optional;
@@ -42,13 +41,21 @@ import org.eclipse.digitaltwin.aas4j.v3.model.Key;
 import org.eclipse.digitaltwin.aas4j.v3.model.KeyTypes;
 import org.eclipse.digitaltwin.aas4j.v3.model.Referable;
 import org.eclipse.digitaltwin.aas4j.v3.model.Reference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
+/**
+ * Mapping FA³ST Event types to CloudEvents conformant to async-aas specification.
+ */
 public class CloudEventMapper {
 
-    private static final String APPLICATION_JSON = "application/json";
+    private static final Logger LOGGER = LoggerFactory.getLogger(CloudEventMapper.class);
 
-    private final Map<Class<? extends EventMessage>, String> internalToCloudeventMap = Map.of(
+    private static final String APPLICATION_JSON = "application/json";
+    private static final String SEMANTIC_ID_KEY = "semanticid";
+
+    private final Map<Class<? extends EventMessage>, String> internalToCloudEventMap = Map.of(
             ValueChangeEventMessage.class, "valueChanged",
             ElementCreateEventMessage.class, "created",
             ElementUpdateEventMessage.class, "updated",
@@ -59,58 +66,93 @@ public class CloudEventMapper {
 
     private final ObjectMapper objectMapper;
 
+    /**
+     * Class constructor.
+     *
+     * @param config Mapping configuration
+     * @param objectMapper AAS referable to JSON mapper
+     */
     public CloudEventMapper(CloudEventMapperConfig config, ObjectMapper objectMapper) {
         this.config = config;
         this.objectMapper = objectMapper;
     }
 
 
-    public CloudEvent createCloudevent(EventMessage message) throws URISyntaxException, JsonProcessingException {
-        CloudEventBuilder cloudEventBuilder = createCloudEventBaseBuilder(message);
-
-        cloudEventBuilder = appendSemanticId(cloudEventBuilder, message);
-
-        Referable referable = config.referableSupplier().apply(message.getElement());
-        if (config.slimEvents() && referable != null) {
-            cloudEventBuilder.withData(objectMapper.writeValueAsBytes(referable));
+    /**
+     * Returns whether this mapper can handle a FA³ST event message.
+     *
+     * @param m The message to test
+     * @return True if the mapper can handle the message, else false
+     */
+    public boolean canHandle(EventMessage m) {
+        try {
+            getEventType(m.getClass());
         }
+        catch (IllegalArgumentException e) {
+            return false;
+        }
+
+        KeyTypes rootType = Optional.ofNullable(ReferenceHelper.getRoot(m.getElement()))
+                .orElseThrow()
+                .getType();
+
+        return rootType == ASSET_ADMINISTRATION_SHELL || rootType == SUBMODEL;
+    }
+
+
+    /**
+     * Map a FA³ST event message to a CloudEvent.
+     *
+     * @param message The FA³ST event message
+     * @return The mapped CloudEvent
+     * @throws JsonProcessingException Mapping AAS referable to JSON failed
+     */
+    public CloudEvent createCloudEvent(EventMessage message) throws JsonProcessingException {
+        CloudEventBuilder cloudEventBuilder = createCloudEventBaseBuilder(message);
+        appendSemanticId(cloudEventBuilder, message);
+        appendData(cloudEventBuilder, message);
 
         return cloudEventBuilder.build();
     }
 
 
-    private CloudEventBuilder appendSemanticId(CloudEventBuilder cloudEventBuilder, EventMessage message) {
-        // Get referable element (only possible with some EventMessage types)
-        Referable element = config.referableSupplier().apply(message.getElement());
-
-        Optional<String> maybeSemanticId = Optional.ofNullable(element).map(this::getSemanticId);
-        if (maybeSemanticId.isPresent()) {
-            cloudEventBuilder = cloudEventBuilder
-                    .withExtension("semanticid", maybeSemanticId.get());
+    private void appendData(CloudEventBuilder cloudEventBuilder, EventMessage message) {
+        if (!config.slimEvents()) {
+            Optional.ofNullable(config.referableSupplier().apply(message.getElement()))
+                    .map(value -> {
+                        try {
+                            return objectMapper.writeValueAsBytes(value);
+                        }
+                        catch (JsonProcessingException e) {
+                            LOGGER.warn("{} when trying to write referable into data field: {}", e.getClass().getName(), e.getMessage());
+                            return null;
+                        }
+                    })
+                    .ifPresent(cloudEventBuilder::withData);
         }
-
-        return cloudEventBuilder;
     }
 
 
-    private CloudEventBuilder createCloudEventBaseBuilder(EventMessage message) throws URISyntaxException {
-        CloudEventBuilder builder = CloudEventBuilder
-                .v1() // specversion
+    private void appendSemanticId(CloudEventBuilder cloudEventBuilder, EventMessage message) {
+        Optional.ofNullable(config.referableSupplier().apply(message.getElement()))
+                .map(this::getSemanticId)
+                .ifPresent(s -> cloudEventBuilder.withExtension(SEMANTIC_ID_KEY, s));
+    }
+
+
+    private CloudEventBuilder createCloudEventBaseBuilder(EventMessage message) {
+        return CloudEventBuilder
+                .v1() // spec version
                 .withId(UUID.randomUUID().toString()) // id
                 .withSource(getSourceUri(message.getElement())) // source
-                .withDataContentType(APPLICATION_JSON) // datacontenttype
-                .withDataSchema(new URI(config.dataSchemaPrefix() + getSpecificElementName(message.getElement()))) // dataschema
+                .withDataContentType(APPLICATION_JSON) // data content type
+                .withDataSchema(URI.create(config.dataSchemaPrefix() + getSpecificElementName(message.getElement()))) // dataschema
                 .withType(config.eventTypePrefix().concat(getEventType(message.getClass()))) // type
                 .withTime(OffsetDateTime.now()); // time
-
-        Optional.ofNullable(getSemanticId(config.referableSupplier().apply(message.getElement())))
-                .ifPresent(semanticId -> builder.withExtension("semanticid", semanticId));
-
-        return builder;
     }
 
 
-    private URI getSourceUri(Reference reference) throws URISyntaxException {
+    private URI getSourceUri(Reference reference) {
         // base
         String uriString = config.eventCallbackAddress().endsWith("/")
                 ? config.eventCallbackAddress().substring(0, config.eventCallbackAddress().length() - 1)
@@ -123,9 +165,9 @@ public class CloudEventMapper {
 
         // identifiable
         uriString = uriString.concat(switch (root.getType()) {
-            case ASSET_ADMINISTRATION_SHELL -> "shells";
-            case SUBMODEL -> "submodels";
-            default -> throw new IllegalArgumentException(String.format("Reference base element type must be %s or %s for cloudevent but was %s",
+            case ASSET_ADMINISTRATION_SHELL -> "/shells/";
+            case SUBMODEL -> "/submodels/";
+            default -> throw new IllegalArgumentException(String.format("CloudEvents message bus only supports %s or %s but was %s",
                     ASSET_ADMINISTRATION_SHELL, SUBMODEL, root.getType()));
         })
                 .concat(EncodingHelper.base64UrlEncode(root.getValue()));
@@ -133,16 +175,16 @@ public class CloudEventMapper {
         // referable
         if (reference.getKeys().size() > 1) {
             // SubmodelElement
-            uriString = uriString.concat("submodel-elements")
+            uriString = uriString.concat("/submodel-elements/")
                     .concat(IdShortPath.fromReference(reference).toString());
         }
 
-        return new URI(String.join("/", uriString));
+        return URI.create(String.join("/", uriString));
     }
 
 
     private String getEventType(Class<? extends EventMessage> messageClass) {
-        String eventType = internalToCloudeventMap.get(messageClass);
+        String eventType = internalToCloudEventMap.get(messageClass);
 
         if (eventType == null) {
             throw new IllegalArgumentException(String.format("EventMessage type not supported: %s", messageClass));

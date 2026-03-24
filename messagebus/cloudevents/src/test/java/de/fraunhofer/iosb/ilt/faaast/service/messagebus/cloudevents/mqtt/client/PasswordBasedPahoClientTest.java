@@ -12,30 +12,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package de.fraunhofer.iosb.ilt.faaast.service.messagebus.cloudevents.mqtt.client.impl;
+package de.fraunhofer.iosb.ilt.faaast.service.messagebus.cloudevents.mqtt.client;
 
-import de.fraunhofer.iosb.ilt.faaast.service.exception.MessageBusException;
-import de.fraunhofer.iosb.ilt.faaast.service.messagebus.cloudevents.mqtt.client.PahoClient;
+import de.fraunhofer.iosb.ilt.faaast.service.messagebus.cloudevents.MessageBusCloudEventsConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.messagebus.cloudevents.mqtt.client.config.MqttClientConfig;
-import java.util.Optional;
+import de.fraunhofer.iosb.ilt.faaast.service.messagebus.cloudevents.mqtt.client.impl.PasswordBasedPahoClient;
 
 
-/**
- * Implementation of the MQTT client authenticating via password, if available.
- */
-public class PasswordBasedPahoClient extends PahoClient {
-
-    private final String password;
-
-    public PasswordBasedPahoClient(MqttClientConfig config) {
-        super(config);
-        this.password = config.password();
-    }
-
+public class PasswordBasedPahoClientTest extends AbstractPahoClientTest<PasswordBasedPahoClient> {
 
     @Override
-    public void prepareConnect() throws MessageBusException {
-        super.prepareConnect();
-        Optional.ofNullable(password).ifPresent(this::setPassword);
+    protected PasswordBasedPahoClient getInstance() {
+        var messageBusConfig = MessageBusCloudEventsConfig.builder().build();
+        return new PasswordBasedPahoClient(new MqttClientConfig(
+                messageBusConfig.getClientCertificate(),
+                MQTT_BROKER_URL,
+                USERNAME,
+                PASSWORD,
+                null,
+                null,
+                null));
     }
 }

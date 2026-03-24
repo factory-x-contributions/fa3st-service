@@ -14,24 +14,4 @@
  */
 package de.fraunhofer.iosb.ilt.faaast.service.messagebus.cloudevents;
 
-public class MessageBusCloudeventsPasswordBasedTest extends AbstractMessageBusCloudeventsTest {
-
-    @Override
-    protected MessageBusCloudeventsConfig getBaseConfig() {
-        return MessageBusCloudeventsConfig.builder()
-                .host("tcp://127.0.0.1:1883")
-                .build();
-    }
-
-
-    @Override
-    protected void mockServer(MessageBusCloudeventsConfig config) {
-        // TODO setup such that static password is requested as password
-    }
-
-
-    @Override
-    protected void clearServerMocks() {
-        // TODO clear all mocks
-    }
-}
+public class MessageBusCloudEventsTokenBasedTest extends AbstractMessageBusCloudEventsTest {}

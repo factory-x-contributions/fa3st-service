@@ -51,16 +51,16 @@ public class TokenBasedPahoClient extends PahoClient {
 
 
     @Override
-    public void start() throws MessageBusException {
+    public void connect() throws MessageBusException {
         scheduleRefresh();
-        super.start();
+        super.connect();
     }
 
 
     @Override
-    public void stop() {
+    public void disconnect() {
         tokenRefreshScheduler.shutdownNow();
-        super.stop();
+        super.disconnect();
     }
 
 
@@ -70,7 +70,6 @@ public class TokenBasedPahoClient extends PahoClient {
             token = client.requestToken(request);
         }
         catch (JsonProcessingException | MessageBusException e) {
-            Thread.currentThread().interrupt();
             logger.warn("Token refresh failed, will retry in 60s.", e);
             tokenRefreshScheduler.schedule(this::scheduleRefresh, 60, TimeUnit.SECONDS);
             return;

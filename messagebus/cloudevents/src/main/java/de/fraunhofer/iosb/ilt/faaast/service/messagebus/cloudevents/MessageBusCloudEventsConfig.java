@@ -21,11 +21,11 @@ import java.util.UUID;
 
 
 /**
- * Configuration class for {@link MessageBusCloudevents}.
+ * Configuration class for {@link MessageBusCloudEvents}.
  */
-public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusCloudevents> {
+public class MessageBusCloudEventsConfig extends MessageBusConfig<MessageBusCloudEvents> {
 
-    private static final String DEFAULT_CLIENT_ID = "FA³ST Cloudevents" + UUID.randomUUID();
+    private static final String DEFAULT_CLIENT_ID = "FA³ST CloudEvents" + UUID.randomUUID();
     private static final String DEFAULT_CLIENT_KEYSTORE_PASSWORD = "";
     private static final String DEFAULT_CLIENT_KEYSTORE_PATH = "";
     private static final String DEFAULT_HOST = "tcp://localhost:1883";
@@ -49,7 +49,7 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
     private String secret;
     private String identityProviderUrl;
 
-    public MessageBusCloudeventsConfig() {
+    public MessageBusCloudEventsConfig() {
         this.host = DEFAULT_HOST;
         this.clientCertificate = CertificateConfig.builder()
                 .keyStorePath(DEFAULT_CLIENT_KEYSTORE_PATH)
@@ -57,8 +57,6 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
                 .build();
         this.clientId = DEFAULT_CLIENT_ID;
         this.topicPrefix = DEFAULT_TOPIC_PREFIX;
-        this.user = "user";
-        this.password = "password";
         this.slimEvents = DEFAULT_SLIM_EVENTS;
         this.eventCallbackAddress = DEFAULT_EVENT_CALLBACK_ADDRESS;
         this.eventTypePrefix = DEFAULT_EVENT_TYPE_PREFIX;
@@ -194,7 +192,7 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        MessageBusCloudeventsConfig other = (MessageBusCloudeventsConfig) o;
+        MessageBusCloudEventsConfig other = (MessageBusCloudEventsConfig) o;
         return Objects.equals(host, other.host)
                 && Objects.equals(clientCertificate, other.clientCertificate)
                 && Objects.equals(password, other.password)
@@ -226,7 +224,7 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
         return new Builder();
     }
 
-    public static class Builder extends AbstractBuilder<MessageBusCloudeventsConfig, Builder> {
+    public static class Builder extends AbstractBuilder<MessageBusCloudEventsConfig, Builder> {
 
         @Override
         protected Builder getSelf() {
@@ -235,14 +233,14 @@ public class MessageBusCloudeventsConfig extends MessageBusConfig<MessageBusClou
 
 
         @Override
-        protected MessageBusCloudeventsConfig newBuildingInstance() {
-            return new MessageBusCloudeventsConfig();
+        protected MessageBusCloudEventsConfig newBuildingInstance() {
+            return new MessageBusCloudEventsConfig();
         }
 
     }
 
-    private abstract static class AbstractBuilder<T extends MessageBusCloudeventsConfig, B extends AbstractBuilder<T, B>>
-            extends MessageBusConfig.AbstractBuilder<MessageBusCloudevents, T, B> {
+    private abstract static class AbstractBuilder<T extends MessageBusCloudEventsConfig, B extends AbstractBuilder<T, B>>
+            extends MessageBusConfig.AbstractBuilder<MessageBusCloudEvents, T, B> {
 
         public B from(T base) {
             getBuildingInstance().setHost(base.getHost());
