@@ -49,7 +49,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 
-public abstract class AbstractMessageBusCloudEventsTest {
+public class MessageBusCloudEventsTest {
 
     private static final Server MQTT_BROKER = new Server();
 

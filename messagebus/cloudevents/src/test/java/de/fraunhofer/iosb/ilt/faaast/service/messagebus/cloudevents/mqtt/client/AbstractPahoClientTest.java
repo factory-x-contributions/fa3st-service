@@ -21,6 +21,15 @@ import io.moquette.broker.Server;
 import io.moquette.broker.config.IConfig;
 import io.moquette.broker.config.MemoryConfig;
 import io.moquette.broker.security.IAuthenticator;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Properties;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.eclipse.paho.client.mqttv3.IMqttMessageListener;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
@@ -29,13 +38,6 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Properties;
-import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 
 public abstract class AbstractPahoClientTest<T extends PahoClient> {
@@ -61,9 +63,14 @@ public abstract class AbstractPahoClientTest<T extends PahoClient> {
     @BeforeClass
     public static void init() throws IOException, MqttException {
         IConfig config = new MemoryConfig(new Properties());
+        Path tempDir = Files.createTempDirectory("moquette-test-");
+        config.setProperty(IConfig.DATA_PATH_PROPERTY_NAME, tempDir.toString() + File.separator);
         config.setProperty(IConfig.PERSISTENCE_ENABLED_PROPERTY_NAME, "false");
+        config.setProperty(IConfig.PERSISTENT_QUEUE_TYPE_PROPERTY_NAME, "inmemory");
+
         config.setProperty(IConfig.ALLOW_ANONYMOUS_PROPERTY_NAME, "false");
         config.setProperty(IConfig.PORT_PROPERTY_NAME, String.valueOf(MQTT_BROKER_PORT));
+
         IAuthenticator authenticator = (clientId, username, password) -> USERNAME.equals(username) && PASSWORD.equals(new String(password));
 
         MQTT_BROKER.startServer(config, null, null, authenticator, null);
