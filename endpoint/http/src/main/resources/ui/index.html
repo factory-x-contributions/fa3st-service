@@ -158,7 +158,7 @@ function renderList() {
       html += '<div class="card" onclick="loadDetail(\'' + (isAas ? 'aas' : 'submodel') + '\', \'' + esc(item.id).replace(/'/g, "\\'") + '\')">';
       html += '<div class="card-header">';
       if (isAas) html += '<img class="card-thumb" src="' + getThumbnailUrl(item) + '" onerror="this.style.display=\'none\'" alt="">';
-      html += '<div><div class="card-title">' + esc(item.idShort || '(no idShort)') + '</div>';
+      html += '<div style="flex:1;min-width:0"><div class="card-title">' + esc(item.idShort || '(no idShort)') + '</div>';
       html += '<div class="card-id">' + esc(item.id) + '</div>';
       if (desc) html += '<div class="card-id" style="margin-top:2px">' + esc(desc) + '</div>';
       html += '</div><span class="card-type ' + typeClass + '">' + typeLabel + '</span></div></div>';
