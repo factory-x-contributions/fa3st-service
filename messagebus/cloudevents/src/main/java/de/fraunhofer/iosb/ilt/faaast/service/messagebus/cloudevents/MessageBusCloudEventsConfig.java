@@ -46,7 +46,8 @@ public class MessageBusCloudEventsConfig extends MessageBusConfig<MessageBusClou
     private String eventCallbackAddress;
     private String eventTypePrefix;
     private String dataSchemaPrefix;
-    private String secret;
+    private String oauth2ClientId;
+    private String oauth2ClientSecret;
     private String identityProviderUrl;
 
     public MessageBusCloudEventsConfig() {
@@ -74,13 +75,23 @@ public class MessageBusCloudEventsConfig extends MessageBusConfig<MessageBusClou
     }
 
 
-    public String getClientSecret() {
-        return secret;
+    public String getOauth2ClientSecret() {
+        return oauth2ClientSecret;
     }
 
 
-    public void setClientSecret(String secret) {
-        this.secret = secret;
+    public void setOauth2ClientSecret(String oauth2ClientSecret) {
+        this.oauth2ClientSecret = oauth2ClientSecret;
+    }
+
+
+    public String getOauth2ClientId() {
+        return oauth2ClientId;
+    }
+
+
+    public void setOauth2ClientId(String oauth2ClientId) {
+        this.oauth2ClientId = oauth2ClientId;
     }
 
 
@@ -305,8 +316,14 @@ public class MessageBusCloudEventsConfig extends MessageBusConfig<MessageBusClou
         }
 
 
-        public B clientSecret(String value) {
-            getBuildingInstance().setClientSecret(value);
+        public B oauth2ClientSecret(String value) {
+            getBuildingInstance().setOauth2ClientSecret(value);
+            return getSelf();
+        }
+
+
+        public B oauth2ClientId(String value) {
+            getBuildingInstance().setOauth2ClientId(value);
             return getSelf();
         }
 

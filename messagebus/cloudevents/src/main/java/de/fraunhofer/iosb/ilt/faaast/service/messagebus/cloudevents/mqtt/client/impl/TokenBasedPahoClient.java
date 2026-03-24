@@ -46,7 +46,7 @@ public class TokenBasedPahoClient extends PahoClient {
         client = new Oauth2Client(HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build());
-        request = new Oauth2CredentialsRequest(config.identityProviderUrl(), config.clientId(), config.clientSecret());
+        request = new Oauth2CredentialsRequest(config.identityProviderUrl(), config.oauth2ClientId(), config.oauth2ClientSecret());
     }
 
 

@@ -24,10 +24,10 @@ import java.util.Objects;
  * 
  * @param clientCertificate MQTT client certificate
  * @param host MQTT broker URL
- * @param user MQTT broker auth username
- * @param password MQTT broker auth password
- * @param clientId MQTT broker oauth2 client ID
- * @param clientSecret MQTT broker oauth2 client secret
+ * @param user static auth username
+ * @param password static auth password
+ * @param oauth2ClientId oauth2 client ID
+ * @param oauth2ClientSecret oauth2 client secret
  * @param identityProviderUrl oauth2 IdP URL
  */
 public record MqttClientConfig(
@@ -35,8 +35,8 @@ public record MqttClientConfig(
         String host,
         String user,
         String password,
-        String clientId,
-        String clientSecret,
+        String oauth2ClientId,
+        String oauth2ClientSecret,
         String identityProviderUrl) {
 
     /**
@@ -59,8 +59,8 @@ public record MqttClientConfig(
                 cloudEventsConfig.getHost(),
                 cloudEventsConfig.getUser(),
                 cloudEventsConfig.getPassword(),
-                cloudEventsConfig.getClientId(),
-                cloudEventsConfig.getClientSecret(),
+                cloudEventsConfig.getOauth2ClientId(),
+                cloudEventsConfig.getOauth2ClientSecret(),
                 cloudEventsConfig.getIdentityProviderUrl());
     }
 }
