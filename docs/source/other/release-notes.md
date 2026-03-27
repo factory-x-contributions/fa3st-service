@@ -30,8 +30,7 @@
 	- Added processor for SMT Asset Interfaces Description (AID) and Asset Interfaces Mapping Configuration (AIMC), allowing to create/update/delete asset connections on-the-fly
 
 
-<!--start:changelog-header-->
-## 1.4.0-SNAPSHOT (current development version)<!--end:changelog-header-->
+## 0.2.0
 
 **Internal changes & bugfixes**
 - General
