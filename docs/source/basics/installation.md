@@ -7,7 +7,7 @@
 ## Precompiled JAR
 
 <!--start:download-release-->
-{download}`Latest RELEASE version (0.1.0-cloudevents) (not published on maven repositories)`<!--end:download-release-->
+{download}`Latest RELEASE version (0.2.0) (not published on maven repositories)`<!--end:download-release-->
 
 <!--start:download-snapshot-->
 <!--end:download-snapshot-->
@@ -18,14 +18,14 @@
 <dependency>
 	<groupId>de.fraunhofer.iosb.ilt.faaast.service</groupId>
 	<artifactId>starter</artifactId>
-	<version>0.1.0-cloudevents</version>
+	<version>0.2.0</version>
 </dependency>
 ```
 
 ## Gradle Dependency
 
 ```groovy
-implementation 'de.fraunhofer.iosb.ilt.faaast.service:starter:0.1.0-cloudevents'
+implementation 'de.fraunhofer.iosb.ilt.faaast.service:starter:0.2.0'
 ```
 
 ## Build from Source
