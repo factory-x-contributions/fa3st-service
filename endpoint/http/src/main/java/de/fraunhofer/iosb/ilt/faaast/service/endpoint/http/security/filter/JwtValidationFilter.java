@@ -128,8 +128,7 @@ public class JwtValidationFilter extends JwtAuthorizationFilter {
                 String form = "grant_type=" + URLEncoder.encode("urn:ietf:params:oauth:grant-type:token-exchange", StandardCharsets.UTF_8) +
                         "&subject_token_type=" + URLEncoder.encode("urn:ietf:params:oauth:token-type:jwt", StandardCharsets.UTF_8) +
                         "&requested_token_type=" + URLEncoder.encode("urn:ietf:params:oauth:token-type:access_token", StandardCharsets.UTF_8) +
-                        "&subject_token=" + jwt.getToken() +
-                        "&audience=" + URLEncoder.encode("fa3st", StandardCharsets.UTF_8);
+                        "&subject_token=" + jwt.getToken();
 
                 HttpRequest request = HttpRequest.newBuilder()
                         .header("Content-Type", "application/x-www-form-urlencoded")
