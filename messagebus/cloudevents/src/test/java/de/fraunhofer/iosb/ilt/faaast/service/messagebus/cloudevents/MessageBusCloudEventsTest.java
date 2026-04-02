@@ -50,7 +50,8 @@ import org.junit.Test;
 
 
 /**
- * Note: Since the CloudEvents message bus contains the functionality of the internal message bus, the internal message bus behavior is also tested here.
+ * Note: Since the CloudEvents message bus contains the functionality of the internal message bus, the internal message
+ * bus behavior is also tested here.
  */
 public class MessageBusCloudEventsTest {
 
