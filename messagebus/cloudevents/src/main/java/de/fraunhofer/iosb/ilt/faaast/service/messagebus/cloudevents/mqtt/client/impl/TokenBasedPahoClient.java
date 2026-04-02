@@ -52,7 +52,7 @@ public class TokenBasedPahoClient extends PahoClient {
 
     @Override
     public void connect() throws MessageBusException {
-        scheduleRefresh();
+        refresh();
         super.connect();
     }
 
@@ -64,18 +64,18 @@ public class TokenBasedPahoClient extends PahoClient {
     }
 
 
-    private void scheduleRefresh() {
+    private void refresh() {
         Oauth2CredentialsResponse token;
         try {
             token = client.requestToken(request);
         }
         catch (JsonProcessingException | MessageBusException e) {
             logger.warn("Token refresh failed, will retry in 60s.", e);
-            tokenRefreshScheduler.schedule(this::scheduleRefresh, 60, TimeUnit.SECONDS);
+            tokenRefreshScheduler.schedule(this::refresh, 60, TimeUnit.SECONDS);
             return;
         }
         setPassword(token.accessToken());
 
-        tokenRefreshScheduler.schedule(this::scheduleRefresh, token.expiresIn() - 5, TimeUnit.SECONDS);
+        tokenRefreshScheduler.schedule(this::refresh, token.expiresIn() - 5, TimeUnit.SECONDS);
     }
 }

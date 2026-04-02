@@ -14,9 +14,8 @@
  */
 package de.fraunhofer.iosb.ilt.faaast.service.messagebus.cloudevents.oauth2;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.time.Instant;
+
 import java.util.Objects;
 
 
@@ -25,20 +24,11 @@ import java.util.Objects;
  *
  * @param accessToken The oauth2 access token commonly used in Authorization header with "bearer " prefix.
  * @param expiresIn Time in seconds until this token expires
- * @param expiry Expiry of the token as an instant in time.
  */
-public record Oauth2CredentialsResponse(@JsonProperty("access_token") String accessToken, @JsonProperty("expires_in") Long expiresIn, Instant expiry) {
+public record Oauth2CredentialsResponse(@JsonProperty("access_token") String accessToken, @JsonProperty("expires_in") Long expiresIn) {
 
     public Oauth2CredentialsResponse {
         Objects.requireNonNull(accessToken, "access_token must not be null");
         Objects.requireNonNull(expiresIn, "expires_in must not be null");
-        expiry = Instant.now().plusSeconds(expiresIn);
-    }
-
-
-    @JsonIgnore
-    @Override
-    public Instant expiry() {
-        return expiry;
     }
 }

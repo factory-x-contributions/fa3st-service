@@ -217,5 +217,4 @@ public abstract class PahoClient {
             return sslContext.getSocketFactory();
         }
     }
-
 }
