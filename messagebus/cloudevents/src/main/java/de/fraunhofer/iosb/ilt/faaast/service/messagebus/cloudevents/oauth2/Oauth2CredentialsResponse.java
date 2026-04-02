@@ -15,7 +15,6 @@
 package de.fraunhofer.iosb.ilt.faaast.service.messagebus.cloudevents.oauth2;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.util.Objects;
 
 
