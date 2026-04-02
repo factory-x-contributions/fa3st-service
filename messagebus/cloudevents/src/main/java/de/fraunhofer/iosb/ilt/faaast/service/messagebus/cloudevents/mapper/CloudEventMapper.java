@@ -33,6 +33,7 @@ import io.cloudevents.CloudEvent;
 import io.cloudevents.core.builder.CloudEventBuilder;
 import java.net.URI;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -46,10 +47,9 @@ import org.slf4j.LoggerFactory;
 
 
 /**
- * Mapping FA³ST Event types to CloudEvents conformant to async-aas specification.
+ * Base class for mapping FA³ST Event types to CloudEvents conformant to async-aas specification.
  */
-public class CloudEventMapper {
-
+public abstract class CloudEventMapper {
     private static final Logger LOGGER = LoggerFactory.getLogger(CloudEventMapper.class);
 
     private static final String APPLICATION_JSON = "application/json";
@@ -63,14 +63,13 @@ public class CloudEventMapper {
             OperationInvokeEventMessage.class, "invoked",
             OperationFinishEventMessage.class, "finished");
     private final CloudEventMapperConfig config;
-
     private final ObjectMapper objectMapper;
 
     /**
      * Class constructor.
      *
-     * @param config Mapping configuration
-     * @param objectMapper AAS referable to JSON mapper
+     * @param config Mapping config.
+     * @param objectMapper JSON-serializer.
      */
     public CloudEventMapper(CloudEventMapperConfig config, ObjectMapper objectMapper) {
         this.config = config;
@@ -84,11 +83,9 @@ public class CloudEventMapper {
      * @param m The message to test
      * @return True if the mapper can handle the message, else false
      */
+
     public boolean canHandle(EventMessage m) {
-        try {
-            getEventType(m.getClass());
-        }
-        catch (IllegalArgumentException e) {
+        if (getHandleable().stream().noneMatch(c -> c.isAssignableFrom(m.getClass()))) {
             return false;
         }
 
@@ -105,14 +102,58 @@ public class CloudEventMapper {
      *
      * @param message The FA³ST event message
      * @return The mapped CloudEvent
-     * @throws JsonProcessingException Mapping AAS referable to JSON failed
      */
-    public CloudEvent createCloudEvent(EventMessage message) throws JsonProcessingException {
+    public CloudEvent createCloudEvent(EventMessage message) {
         CloudEventBuilder cloudEventBuilder = createCloudEventBaseBuilder(message);
-        appendSemanticId(cloudEventBuilder, message);
         appendData(cloudEventBuilder, message);
-
+        cloudEventBuilder.withDataContentType(APPLICATION_JSON); // data content type
         return cloudEventBuilder.build();
+    }
+
+
+    /**
+     * Get event classes this concrete implementation can handle.
+     *
+     * @return The classes this implementation can handle.
+     */
+    protected abstract List<Class<? extends EventMessage>> getHandleable();
+
+
+    /**
+     * Creates the basis for all cloudevents with the required fields.
+     *
+     * @param message The FA³ST event message to map into the base cloud event
+     * @return The base cloud event builder
+     */
+    protected CloudEventBuilder createCloudEventBaseBuilder(EventMessage message) {
+        CloudEventBuilder builder = CloudEventBuilder
+                .v1() // spec version
+                .withId(UUID.randomUUID().toString()) // id
+                .withSource(getSourceUri(message.getElement())) // source
+                .withDataSchema(URI.create(config.dataSchemaPrefix() + getSpecificElementName(message.getElement()))) // dataschema
+                .withType(config.eventTypePrefix().concat(getEventType(message.getClass()))) // type
+                .withTime(OffsetDateTime.now()); // time
+
+        appendSemanticId(builder, message);
+
+        return builder;
+    }
+
+
+    private void appendSemanticId(CloudEventBuilder cloudEventBuilder, EventMessage message) {
+        Optional.ofNullable(config.referableSupplier().apply(message.getElement()))
+                .map(this::getSemanticId)
+                .ifPresent(s -> cloudEventBuilder.withExtension(SEMANTIC_ID_KEY, s));
+    }
+
+
+    private String getEventType(Class<? extends EventMessage> messageClass) {
+        String eventType = internalToCloudEventMap.get(messageClass);
+
+        if (eventType == null) {
+            throw new IllegalArgumentException(String.format("EventMessage type not supported: %s", messageClass));
+        }
+        return eventType;
     }
 
 
@@ -133,22 +174,29 @@ public class CloudEventMapper {
     }
 
 
-    private void appendSemanticId(CloudEventBuilder cloudEventBuilder, EventMessage message) {
-        Optional.ofNullable(config.referableSupplier().apply(message.getElement()))
-                .map(this::getSemanticId)
-                .ifPresent(s -> cloudEventBuilder.withExtension(SEMANTIC_ID_KEY, s));
+    private String getSemanticId(Referable referable) {
+        if (!(referable instanceof HasSemantics semanticElement) || ReferenceHelper.getRoot(semanticElement.getSemanticId()) == null) {
+            return null;
+        }
+        // If the referable is changed in between the if statement and this one, throw nullpointer
+        return Optional.ofNullable(ReferenceHelper.getRoot(semanticElement.getSemanticId()))
+                .map(Key::getValue)
+                .orElse(null);
     }
 
 
-    private CloudEventBuilder createCloudEventBaseBuilder(EventMessage message) {
-        return CloudEventBuilder
-                .v1() // spec version
-                .withId(UUID.randomUUID().toString()) // id
-                .withSource(getSourceUri(message.getElement())) // source
-                .withDataContentType(APPLICATION_JSON) // data content type
-                .withDataSchema(URI.create(config.dataSchemaPrefix() + getSpecificElementName(message.getElement()))) // dataschema
-                .withType(config.eventTypePrefix().concat(getEventType(message.getClass()))) // type
-                .withTime(OffsetDateTime.now()); // time
+    private String getSpecificElementName(Reference reference) {
+        KeyTypes effectiveKeyType = Optional.ofNullable(ReferenceHelper.getEffectiveKeyType(reference)).orElseThrow();
+
+        String[] elementNameParts = effectiveKeyType.toString().split("_");
+        StringBuilder elementNameBuilder = new StringBuilder();
+
+        for (String elementNamePart: elementNameParts) {
+            elementNameBuilder.append(elementNamePart.charAt(0));
+            elementNameBuilder.append(elementNamePart.substring(1).toLowerCase());
+        }
+
+        return elementNameBuilder.toString();
     }
 
 
@@ -182,39 +230,4 @@ public class CloudEventMapper {
         return URI.create(String.join("/", uriString));
     }
 
-
-    private String getEventType(Class<? extends EventMessage> messageClass) {
-        String eventType = internalToCloudEventMap.get(messageClass);
-
-        if (eventType == null) {
-            throw new IllegalArgumentException(String.format("EventMessage type not supported: %s", messageClass));
-        }
-        return eventType;
-    }
-
-
-    private String getSpecificElementName(Reference reference) {
-        KeyTypes effectiveKeyType = Optional.ofNullable(ReferenceHelper.getEffectiveKeyType(reference)).orElseThrow();
-
-        String[] elementNameParts = effectiveKeyType.toString().split("_");
-        StringBuilder elementNameBuilder = new StringBuilder();
-
-        for (String elementNamePart: elementNameParts) {
-            elementNameBuilder.append(elementNamePart.charAt(0));
-            elementNameBuilder.append(elementNamePart.substring(1).toLowerCase());
-        }
-
-        return elementNameBuilder.toString();
-    }
-
-
-    private String getSemanticId(Referable referable) {
-        if (!(referable instanceof HasSemantics semanticElement) || ReferenceHelper.getRoot(semanticElement.getSemanticId()) == null) {
-            return null;
-        }
-        // If the referable is changed in between the if statement and this one, throw nullpointer
-        return Optional.ofNullable(ReferenceHelper.getRoot(semanticElement.getSemanticId()))
-                .map(Key::getValue)
-                .orElse(null);
-    }
 }

@@ -23,8 +23,10 @@ import de.fraunhofer.iosb.ilt.faaast.service.ServiceContext;
 import de.fraunhofer.iosb.ilt.faaast.service.config.CoreConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.exception.MessageBusException;
 import de.fraunhofer.iosb.ilt.faaast.service.messagebus.MessageBus;
-import de.fraunhofer.iosb.ilt.faaast.service.messagebus.cloudevents.mapper.CloudEventMapper;
 import de.fraunhofer.iosb.ilt.faaast.service.messagebus.cloudevents.mapper.CloudEventMapperConfig;
+import de.fraunhofer.iosb.ilt.faaast.service.messagebus.cloudevents.mapper.CloudEventMapperRegistry;
+import de.fraunhofer.iosb.ilt.faaast.service.messagebus.cloudevents.mapper.impl.DefaultCloudEventMapper;
+import de.fraunhofer.iosb.ilt.faaast.service.messagebus.cloudevents.mapper.impl.ElementDeletedCloudEventMapper;
 import de.fraunhofer.iosb.ilt.faaast.service.messagebus.cloudevents.mqtt.client.PahoClient;
 import de.fraunhofer.iosb.ilt.faaast.service.messagebus.cloudevents.mqtt.client.config.MqttClientConfig;
 import de.fraunhofer.iosb.ilt.faaast.service.messagebus.cloudevents.mqtt.client.impl.PasswordBasedPahoClient;
@@ -75,7 +77,7 @@ public class MessageBusCloudEvents implements MessageBus<MessageBusCloudEventsCo
     private PahoClient client;
     private ObjectMapper objectMapper;
 
-    private CloudEventMapper eventMapper;
+    private CloudEventMapperRegistry mapperRegistry;
 
     /**
      * Class constructor.
@@ -164,7 +166,11 @@ public class MessageBusCloudEvents implements MessageBus<MessageBusCloudEventsCo
             }
         };
 
-        eventMapper = new CloudEventMapper(CloudEventMapperConfig.from(config, referableSupplier), objectMapper);
+        CloudEventMapperConfig cloudEventMapperConfig = CloudEventMapperConfig.from(config, referableSupplier);
+
+        mapperRegistry = new CloudEventMapperRegistry();
+        mapperRegistry.register(new DefaultCloudEventMapper(cloudEventMapperConfig, objectMapper));
+        mapperRegistry.register(new ElementDeletedCloudEventMapper(cloudEventMapperConfig, objectMapper));
 
         running.set(false);
     }
@@ -186,9 +192,9 @@ public class MessageBusCloudEvents implements MessageBus<MessageBusCloudEventsCo
 
     private void distributeCloudEvent(EventMessage message) throws MessageBusException {
         try {
-            if (eventMapper.canHandle(message)) {
+            if (mapperRegistry.canHandle(message)) {
                 LOGGER.debug("Publishing {} to {}", message.getClass().getSimpleName(), config.getHost());
-                CloudEvent cloudEvent = eventMapper.createCloudEvent(message);
+                CloudEvent cloudEvent = mapperRegistry.createCloudEvent(message);
                 client.publish(config.getTopicPrefix(), objectMapper.writeValueAsString(cloudEvent));
             }
         }
