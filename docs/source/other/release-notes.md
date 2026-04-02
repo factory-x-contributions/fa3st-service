@@ -1,15 +1,51 @@
 # Release Notes
 ## 0.1.0-cloudevents
 
+## 0.2.0
+
+**Internal changes & bugfixes**
+- General
+	- Fixed bug that incorrectly removed submodel reference from AAS when updating a submodel via PUT /submodels/{submodelId}
+	- Better failure logging in the registry synchronization component: Log error responses from AAS/Submodel registries
+	- Fix idShortPaths to support Entity and AnnotatedRelationshipElement
+    - Fix inconsistencies between docs and proprietary API: DELETE /reset resets the server, POST /import imports an AAS file, /upload was removed from docs
+    - Fix incorrect triggering of ValueChanged events when a value did in fact not change.
+    - Fix ElementDelete events not being triggered on DELETE /reset.
+- Asset Connection
+	- OPC UA
+		- When connecting to an OPC UA asset and the discovery service returns mutliple URLs to use, the ones with a reachable host are preferred.
+- Endpoint
+	- HTTP
+		- URL prefix /api/v3.x is now optional
+- SMT Processor
+	- AID/AIMC
+		- Fixed bug that prevented to update asset connection providers are runtime
+		- Fixed bug that prevented subscription providers to not be properly stopped
+
+## 1.3.0
+
+**New Features & Major Changes**
+- General
+	- New interface `SubmodelTemplateProcessor` that enables handling of SMTs
+- SubmodelTemplateProcessors
+	- Added processor for SMT Asset Interfaces Description (AID) and Asset Interfaces Mapping Configuration (AIMC), allowing to create/update/delete asset connections on-the-fly
+
+
 **Internal changes & bugfixes**
 - General
 	- Fixed bug that auxiliary files were not loaded when starting from code with an initial model file
 	- Fixed bug that caused deleting submodel-refs from AAS to fail when the submodel-ref had referredSemanticId set
+	- Minor corrections in Logging
+	- Make minInflateRatio configurable to be able to prevent zip bomb error when loading AASX files.
+- Asset Connection
+	- Asset connections are now normalized, i.e., connections with exactly the same properties (e.g. type, server, credentials, etc.) are merged into a single connection
+	- Direct modification of asset connections and providers no longer supported, instead every interaction with connections or providers must be made via `AssetConnectionManager`
 - Endpoint
 	- HTTP
 		- URL query parameters are now correctly URL-decoded
 		- Enabled `level` query parameter for calls to /submodels/{submodelIdentifier}/$reference as this is not explicitely forbidden in the specification although the parameter does not have any actual effect
 		- fixed bug that disabled any HTTP PATCH request to /$value
+		- fixed bug in error handler
 	- OPC UA
 		- Fixed error if ConceptDescription doesn't have an IdShort
 
@@ -25,7 +61,7 @@
 	- HTTP
 		- Improved CORS support by introducing additional config properties `corsAllowCredentials`, `corsAllowedHeaders`, `corsAllowedMethods`, `corsAllowedOrigin`, `corsExposedHeaders`, and `corsMaxAge`
 		- Improved error messages; stack trace may now be returned in HTTP responses via config property `includeErrorDetails`
-		- New API calls: PUT on /upload will now accept JSON/AASX model files. DELETE on /reset will erase everything including AAS, Submodels and ConceptDescriptions.
+		- New API calls: POST on /import will now accept JSON/AASX model files. DELETE on /reset will erase everything including AAS, Submodels and ConceptDescriptions.
 	- OPC UA
 		- Added support for all datatypes of the AAS specification
 

@@ -18,30 +18,27 @@ import de.fraunhofer.iosb.ilt.faaast.service.ServiceContext;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.model.HttpRequest;
 import de.fraunhofer.iosb.ilt.faaast.service.endpoint.http.request.mapper.AbstractRequestMapper;
 import de.fraunhofer.iosb.ilt.faaast.service.model.api.Request;
-import de.fraunhofer.iosb.ilt.faaast.service.model.api.request.proprietary.ImportRequest;
+import de.fraunhofer.iosb.ilt.faaast.service.model.api.request.proprietary.UiPageRequest;
 import de.fraunhofer.iosb.ilt.faaast.service.model.exception.InvalidRequestException;
 import de.fraunhofer.iosb.ilt.faaast.service.model.http.HttpMethod;
 import java.util.Map;
 
 
 /**
- * class to map HTTP-POST-Request path: /import.
+ * Class to map HTTP-GET-Request path: /ui.
  */
-public class ImportRequestMapper extends AbstractRequestMapper {
+public class UiPageRequestMapper extends AbstractRequestMapper {
 
-    private static final String PATTERN = "import";
+    private static final String PATTERN = "ui";
 
-    public ImportRequestMapper(ServiceContext serviceContext) {
-        super(serviceContext, HttpMethod.POST, PATTERN);
+    public UiPageRequestMapper(ServiceContext serviceContext) {
+        super(serviceContext, HttpMethod.GET, PATTERN);
     }
 
 
     @Override
     public Request doParse(HttpRequest httpRequest, Map<String, String> urlParameters) throws InvalidRequestException {
-        return ImportRequest.builder()
-                .content(httpRequest.getBody())
-                .contentType(httpRequest.getContentType()
-                        .orElseThrow(() -> new InvalidRequestException("Missing mandatory content-type header")))
+        return UiPageRequest.builder()
                 .build();
     }
 }

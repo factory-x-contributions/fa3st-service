@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>de.fraunhofer.iosb.ilt.faaast.service</groupId>
     <artifactId>service</artifactId>
-    <version>0.1.0-cloudevents</version>
+    <version>0.2.1-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>service</name>
     <description>An implementation of the Asset Administration Shell</description>
@@ -57,7 +57,7 @@
     <scm>
         <connection>scm:git:git://github.com/FraunhoferIOSB/FAAAST-Service.git</connection>
         <developerConnection>scm:git:ssh://github.com:FraunhoferIOSB/FAAAST-Service.git</developerConnection>
-        <tag>v0.1.0-cloudevents</tag>
+        <tag>v0.2.0</tag>
         <url>https://github.com/FraunhoferIOSB/FAAAST-Service/tree/main</url>
     </scm>
     <issueManagement>
@@ -126,7 +126,7 @@
         <maven.plugin.shade.version>3.6.2</maven.plugin.shade.version>
         <maven.plugin.sonar.version>5.5.0.6356</maven.plugin.sonar.version>
         <maven.plugin.source.version>3.4.0</maven.plugin.source.version>
-        <maven.plugin.spotless.version>3.3.0</maven.plugin.spotless.version>
+        <maven.plugin.spotless.version>3.4.0</maven.plugin.spotless.version>
         <maven.plugin.surefire.version>3.5.5</maven.plugin.surefire.version>
         <milo.version>1.1.1</milo.version>
         <mockito.version>5.23.0</mockito.version>
@@ -139,8 +139,8 @@
         <parsson.version>1.1.7</parsson.version>
         <picocli.version>4.7.7</picocli.version>
         <poi.ooxml.version>5.5.1</poi.ooxml.version>
-        <proguard.core.version>9.3.1</proguard.core.version>
-        <proguard.version>7.8.2</proguard.version>
+        <proguard.core.version>9.3.2</proguard.core.version>
+        <proguard.version>7.9.0</proguard.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <prosys.sdk.version>5.6.0-221</prosys.sdk.version>
         <protobuf.version>4.34.0</protobuf.version>
@@ -290,7 +290,7 @@
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>license-maven-plugin</artifactId>
-                    <version>2.6.0</version>
+                    <version>2.7.1</version>
                     <configuration>
                         <outputDirectory>${root.basedir}/docs/third_party_licenses_report</outputDirectory>
                         <licenseMerges>
