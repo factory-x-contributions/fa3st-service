@@ -37,7 +37,6 @@ import de.fraunhofer.iosb.ilt.faaast.service.model.api.paging.PagingInfo;
 import de.fraunhofer.iosb.ilt.faaast.service.model.exception.PersistenceException;
 import de.fraunhofer.iosb.ilt.faaast.service.model.exception.ResourceNotAContainerElementException;
 import de.fraunhofer.iosb.ilt.faaast.service.model.exception.ResourceNotFoundException;
-import de.fraunhofer.iosb.ilt.faaast.service.model.query.json.Query;
 import de.fraunhofer.iosb.ilt.faaast.service.persistence.AssetAdministrationShellSearchCriteria;
 import de.fraunhofer.iosb.ilt.faaast.service.persistence.ConceptDescriptionSearchCriteria;
 import de.fraunhofer.iosb.ilt.faaast.service.persistence.Persistence;
@@ -180,22 +179,8 @@ public class PersistenceFile implements Persistence<PersistenceFileConfig> {
 
 
     @Override
-    public Page<AssetAdministrationShell> findAssetAdministrationShellsWithQuery(AssetAdministrationShellSearchCriteria criteria, QueryModifier modifier, PagingInfo paging,
-                                                                                 Query query)
-            throws PersistenceException {
-        return persistence.findAssetAdministrationShellsWithQuery(criteria, modifier, paging, query);
-    }
-
-
-    @Override
     public Page<Submodel> findSubmodels(SubmodelSearchCriteria criteria, QueryModifier modifier, PagingInfo paging) {
         return persistence.findSubmodels(criteria, modifier, paging);
-    }
-
-
-    @Override
-    public Page<Submodel> findSubmodelsWithQuery(SubmodelSearchCriteria criteria, QueryModifier modifier, PagingInfo paging, Query query) throws PersistenceException {
-        return persistence.findSubmodelsWithQuery(criteria, modifier, paging, query);
     }
 
 
@@ -208,13 +193,6 @@ public class PersistenceFile implements Persistence<PersistenceFileConfig> {
     @Override
     public Page<ConceptDescription> findConceptDescriptions(ConceptDescriptionSearchCriteria criteria, QueryModifier modifier, PagingInfo paging) {
         return persistence.findConceptDescriptions(criteria, modifier, paging);
-    }
-
-
-    @Override
-    public Page<ConceptDescription> findConceptDescriptionsWithQuery(ConceptDescriptionSearchCriteria criteria, QueryModifier modifier, PagingInfo paging, Query query)
-            throws PersistenceException {
-        return persistence.findConceptDescriptionsWithQuery(criteria, modifier, paging, query);
     }
 
 

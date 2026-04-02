@@ -80,7 +80,7 @@ When FA³ST Service synchronizes its shells and submodels with AAS registries de
 			"http://example.com/MyAASRegistry"
 		],
 		"assetConnectionRetryInterval": 1000,
-		"requestHandlerThreadPoolSize": 2,
+		"requestHandlerThreadPoolSize": 2,      
 		"submodelRegistries": [
 			"http://example.com/MySubmodelRegistry"
 		],

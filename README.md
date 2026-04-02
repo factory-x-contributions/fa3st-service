@@ -12,13 +12,7 @@ The features of FA³ST Service include
 - easily extendable & configurable
 - supports synchronization of the digital twins with existing assets using different protocols
 - can be used as CLI, docker container, or embedded library
-- CloudEvents-based message bus for external event distribution over MQTT
-- JSON-based QueryLanguage for filtering AAS objects via HTTP API
-- OPC-UA endpoint support
-- Submodel template mapping configuration (Asset Interfaces Mapping Configuration)
 
-> [!TIP]
-> For more details on FA³ST Client see the [:blue_book: **full documenation**](https://fa3st-service.readthedocs.io).
 
 > [!TIP]
 > For more details on FA³ST Service see the [:blue_book: **full documenation**](https://faaast-service.readthedocs.io/).
