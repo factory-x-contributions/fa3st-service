@@ -28,18 +28,20 @@ import de.fraunhofer.iosb.ilt.faaast.service.model.messagebus.event.noop.NoopEve
 import de.fraunhofer.iosb.ilt.faaast.service.request.handler.AbstractRequestHandler;
 import de.fraunhofer.iosb.ilt.faaast.service.request.handler.RequestExecutionContext;
 import de.fraunhofer.iosb.ilt.faaast.service.util.StreamHelper;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 import org.eclipse.digitaltwin.aas4j.v3.dataformat.core.util.AasUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-
 
 /**
- * Class to handle a {@link ResetRequest} in the service and to send the corresponding response {@link ResetResponse}. Is responsible for communication with the persistence. Note:
- * The side effects of this request can potentially hinder removal of descriptors at registries. It is advised not to issue any other request when using /reset. It is also possible
- * that the last submodel to be removed from a SubmodelRegistry will fail to be removed. This is due to the ordering of event handlers within the messagebus.
+ * Class to handle a {@link ResetRequest} in the service and to send the corresponding response {@link ResetResponse}.
+ * Is responsible for communication with the persistence. Note:
+ * The side effects of this request can potentially hinder removal of descriptors at registries. It is advised not to
+ * issue any other request when using /reset. It is also possible
+ * that the last submodel to be removed from a SubmodelRegistry will fail to be removed. This is due to the ordering of
+ * event handlers within the messagebus.
  */
 public class ResetRequestHandler extends AbstractRequestHandler<ResetRequest, ResetResponse> {
     private static final Logger LOGGER = LoggerFactory.getLogger(ResetRequestHandler.class);
