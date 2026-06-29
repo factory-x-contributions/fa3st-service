@@ -22,6 +22,9 @@ The features of FA³ST Service include
 > For more details on FA³ST Service see the [:blue_book: **full documenation**](https://faaast-service.readthedocs.io/).
 
 
+> [!IMPORTANT]
+> **This repository is archived.** It will receive no further development or maintenance. Interested parties are invited to fork the repository and continue the work independently.
+
 ## Implemented AAS Specifications
 
 - AAS Part 1: Metamodel v3.0 [Specification](https://industrialdigitaltwin.org/wp-content/uploads/2023/06/IDTA-01001-3-0_SpecificationAssetAdministrationShell_Part1_Metamodel.pdf)
